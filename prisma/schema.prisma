@@ -1,0 +1,79 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model Project {
+  id          String      @id @default(cuid())
+  name        String
+  description String?
+  targetType  String
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+  targetConfig TargetConfig?
+  auditRuns   AuditRun[]
+}
+
+model TargetConfig {
+  id                   String   @id @default(cuid())
+  projectId            String   @unique
+  project              Project  @relation(fields: [projectId], references: [id])
+  systemPrompt         String?
+  developerInstructions String?
+  exampleUserPrompt    String?
+  endpointUrl          String?
+  httpMethod           String?
+  requestTemplate      String?
+  authTokenMasked      String?
+  messageFieldPath     String?
+  ragQuery             String?
+  ragChunks            String?
+  ragResponse          String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+}
+
+model AuditRun {
+  id           String       @id @default(cuid())
+  projectId    String
+  project      Project      @relation(fields: [projectId], references: [id])
+  status       String       @default("pending")
+  startedAt    DateTime     @default(now())
+  completedAt  DateTime?
+  overallScore Float?
+  riskTier     String?
+  results      TestResult[]
+}
+
+model TestCase {
+  id               String   @id @default(cuid())
+  name             String
+  category         String
+  prompt           String
+  expectedBehavior String
+  severity         String
+  isDefault        Boolean  @default(true)
+  createdAt        DateTime @default(now())
+}
+
+model TestResult {
+  id           String   @id @default(cuid())
+  auditRunId   String
+  testCaseId   String
+  auditRun     AuditRun @relation(fields: [auditRunId], references: [id])
+  testCase     TestCase @relation(fields: [testCaseId], references: [id])
+  verdict      String
+  confidence   Float
+  explanation  String
+  evidence     String
+  remediation  String
+  responseText String
+  category     String
+  severity     String
+  scoreImpact  Float
+  createdAt    DateTime @default(now())
+}
