@@ -51,6 +51,6 @@ body {
 
 .section-title { @apply text-lg font-semibold text-slate-900; }
 
-input, textarea, select { @apply w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-200 focus:border-brand-400 bg-white; }
+input, textarea, select { @apply w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-600 bg-white; }
 
 label { @apply text-sm font-medium text-slate-700; }
