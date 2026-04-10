@@ -58,6 +58,7 @@ model TestCase {
   severity         String
   isDefault        Boolean  @default(true)
   createdAt        DateTime @default(now())
+  results          TestResult[]
 }
 
 model TestResult {
