@@ -42,7 +42,7 @@ body {
 }
 
 .button-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:border-brand-200 hover:text-brand-700;
+  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:border-brand-100 hover:text-brand-700;
 }
 
 .table { @apply w-full text-sm; }
