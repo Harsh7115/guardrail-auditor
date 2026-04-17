@@ -6,7 +6,7 @@ import { ScoreBadge } from "@/components/score-badge";
 export default async function ProjectPage({ params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({
     where: { id: params.id },
-    include: { auditRuns: { orderBy: { startedAt: "desc" }, take: 3 } }
+    include: { auditRuns: { orderBy: { startedAt: "desc" }, take: 5 }, targetConfig: true }
   });
 
   if (!project) {
@@ -32,6 +32,26 @@ export default async function ProjectPage({ params }: { params: { id: string } }
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="card p-5">
+          <p className="metric-kicker">Target mode</p>
+          <p className="mt-3 text-2xl font-semibold text-white">{project.targetType}</p>
+          <p className="mt-2 text-sm text-slate-400">Current configuration is preserved as a snapshot on every audit run.</p>
+        </div>
+        <div className="card p-5">
+          <p className="metric-kicker">Recent runs</p>
+          <p className="mt-3 text-2xl font-semibold text-white">{project.auditRuns.length}</p>
+          <p className="mt-2 text-sm text-slate-400">Latest five runs stay attached here for iteration and regression review.</p>
+        </div>
+        <div className="card p-5">
+          <p className="metric-kicker">Configuration readiness</p>
+          <p className="mt-3 text-2xl font-semibold text-white">
+            {project.targetConfig ? "Configured" : "Pending"}
+          </p>
+          <p className="mt-2 text-sm text-slate-400">Prompt, endpoint, or RAG details can be updated before each run.</p>
+        </div>
+      </div>
+
       <div className="card p-6 space-y-4">
         <div className="flex items-center justify-between">
           <h2 className="section-title">Recent Runs</h2>
@@ -46,6 +66,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
               <div>
                 <p className="font-semibold text-white">{run.status === "completed" ? "Completed run" : "Pending run"}</p>
                 <p className="text-sm text-slate-500">{formatDate(run.startedAt)}</p>
+                <p className="text-xs uppercase tracking-[0.16em] text-slate-600 mt-1">
+                  {run.executionVersion ?? "modular-executor@v1"} · {run.evaluatorVersion ?? "heuristic-evaluator@v2"}
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 {run.overallScore && <ScoreBadge score={run.overallScore} />}

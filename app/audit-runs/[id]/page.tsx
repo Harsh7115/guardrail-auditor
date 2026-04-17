@@ -24,6 +24,9 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
     (acc, r) => ({ ...acc, [r.verdict]: (acc as any)[r.verdict] + 1 }),
     { pass: 0, warning: 0, fail: 0 }
   );
+  const avgLatency =
+    run.results.filter((result) => result.latencyMs != null).reduce((sum, result) => sum + (result.latencyMs ?? 0), 0) /
+    Math.max(run.results.filter((result) => result.latencyMs != null).length, 1);
 
   return (
     <div className="space-y-6">
@@ -42,7 +45,60 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
         </div>
       </div>
 
+      <div className="grid gap-4 md:grid-cols-4">
+        <div className="card p-5">
+          <p className="metric-kicker">Tests executed</p>
+          <p className="mt-3 text-2xl font-semibold text-white">{run.results.length}</p>
+          <p className="mt-2 text-sm text-slate-400">Every result stores execution and scoring metadata.</p>
+        </div>
+        <div className="card p-5">
+          <p className="metric-kicker">Failures</p>
+          <p className="mt-3 text-2xl font-semibold text-white">{verdictCounts.fail}</p>
+          <p className="mt-2 text-sm text-slate-400">High-signal findings are preserved for remediation review.</p>
+        </div>
+        <div className="card p-5">
+          <p className="metric-kicker">Avg latency</p>
+          <p className="mt-3 text-2xl font-semibold text-white">{Number.isFinite(avgLatency) ? `${Math.round(avgLatency)} ms` : "-"}</p>
+          <p className="mt-2 text-sm text-slate-400">Execution timing is captured per test when available.</p>
+        </div>
+        <div className="card p-5">
+          <p className="metric-kicker">Versions</p>
+          <p className="mt-3 text-lg font-semibold text-white">{run.executionVersion}</p>
+          <p className="mt-2 text-xs uppercase tracking-[0.16em] text-slate-500">{run.evaluatorVersion}</p>
+        </div>
+      </div>
+
       <AuditCharts categoryScores={byCategory} verdictCounts={verdictCounts} overall={run.overallScore ?? 0} />
+
+      <div className="grid gap-4 lg:grid-cols-[0.8fr_1.2fr]">
+        <div className="card p-6">
+          <p className="section-title">Run metadata</p>
+          <div className="mt-4">
+            <div className="key-row">
+              <span className="key-label">Started</span>
+              <span className="key-value">{formatDate(run.startedAt)}</span>
+            </div>
+            <div className="key-row">
+              <span className="key-label">Completed</span>
+              <span className="key-value">{formatDate(run.completedAt)}</span>
+            </div>
+            <div className="key-row">
+              <span className="key-label">Suite</span>
+              <span className="key-value">{run.suiteVersion}</span>
+            </div>
+            <div className="key-row">
+              <span className="key-label">Evaluator</span>
+              <span className="key-value">{run.evaluatorVersion}</span>
+            </div>
+          </div>
+        </div>
+        <div className="card p-6">
+          <p className="section-title">Target snapshot</p>
+          <div className="code-panel mt-4">
+            {JSON.stringify(run.targetSnapshot, null, 2)}
+          </div>
+        </div>
+      </div>
 
       <div className="card p-6 space-y-4">
         <div className="flex items-center justify-between">

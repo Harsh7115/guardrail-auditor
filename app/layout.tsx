@@ -22,7 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
                 </div>
                 <div>
                   <p className="text-lg font-semibold tracking-tight text-white">Guardrail Auditor</p>
-                  <p className="text-sm text-slate-400">Audit. Explain. Remediate.</p>
+                  <p className="text-sm text-slate-400">Audit pipelines. Preserve evidence. Iterate safely.</p>
                 </div>
               </div>
               <nav className="flex flex-wrap items-center gap-2 text-sm text-slate-300">
