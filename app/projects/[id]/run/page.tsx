@@ -21,7 +21,7 @@ export default async function RunPage({ params }: { params: { id: string } }) {
       <div>
         <p className="text-sm text-brand-600 font-semibold">Run</p>
         <h1 className="text-3xl font-bold">Audit Project</h1>
-        <p className="text-slate-600 mt-1">Select categories and launch a full suite. The engine is deterministic and fast.</p>
+        <p className="text-slate-600 mt-1">Select categories and launch a full suite. Execution, scoring, and aggregation now run as separate pipeline stages.</p>
       </div>
       <form action={action} className="card p-6 space-y-4">
         <p className="section-title">Categories</p>

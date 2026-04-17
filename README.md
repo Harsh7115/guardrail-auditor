@@ -1,11 +1,11 @@
 # Guardrail Auditor
 
-An end-to-end Next.js 14 + Prisma + Tailwind SaaS-style MVP for auditing LLM applications. It simulates prompt-injection, data leakage, role bypass, out-of-scope, grounding, and instruction hierarchy tests, then produces a risk dashboard with exports.
+An end-to-end Next.js 14 + Prisma + Tailwind MVP for auditing LLM applications. It now uses a modular audit pipeline that separates target execution, evaluation, and run aggregation while persisting structured evidence and version metadata for each run.
 
 ## Stack
 - Next.js 14 App Router (TypeScript)
 - Tailwind CSS + shadcn-inspired primitives
-- Prisma + SQLite
+- Prisma + PostgreSQL
 - Recharts for charts
 - zod for validation
 - CSV / JSON exports (papaparse-style)
@@ -18,9 +18,7 @@ An end-to-end Next.js 14 + Prisma + Tailwind SaaS-style MVP for auditing LLM app
 `cp .env.example .env`
 
 3) Prisma setup & seed  
-`npx prisma generate`  
-`npx prisma db push`  
-`npx prisma db seed`
+`npm run db:bootstrap`
 
 4) Run dev server  
 `npm run dev`  
@@ -39,12 +37,13 @@ Seed creates a demo project (`demo-project`) and a completed audit run (`demo-ru
 
 ## Architecture Notes
 - Server actions in `lib/actions.ts` handle create/update/run/export.
-- Deterministic evaluator in `lib/evaluator.ts` (regex heuristics for refusal/leak/compliance/grounding).
+- Audit execution, scoring, and aggregation are separated under `lib/audit/*`.
+- `lib/evaluator.ts` still provides the heuristic scorer, but it now sits behind a pipeline seam instead of being embedded inside the run loop.
 - Charts rendered client-side (`components/charts.tsx`).
-- Prisma schema in `prisma/schema.prisma`; seed cases in `prisma/seed.ts`.
+- Prisma schema in `prisma/schema.prisma`; seed cases in `prisma/seed.js`.
 
 ## Adding real model calls
-Replace `simulateResponse` in `lib/actions.ts` with provider calls; keep evaluator to score outputs.
+Add provider-specific executors in `lib/audit/executor.ts` for OpenAI, Anthropic, and production endpoint adapters. The current implementation keeps a simulated fallback plus a generic HTTP executor seam.
 
 ## PDF export (optional)
 Hook into `pdf-lib` in an API route and render a summary; CSV/JSON already implemented.
@@ -54,6 +53,7 @@ Hook into `pdf-lib` in an API route and render a summary; CSV/JSON already imple
 - `npm run build` – production build
 - `npm run prisma:push` – sync schema
 - `npm run prisma:seed` – seed demo data
+- `npm run db:bootstrap` – generate client, push schema, and seed demo data
 
 ## License
 Internal demo use. Adjust as needed.

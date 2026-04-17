@@ -1,10 +1,13 @@
 "use server";
 
 import { prisma } from "./prisma";
-import { evaluateTestCase } from "./evaluator";
 import { z } from "zod";
 import { getDefaultSuite } from "./test-suite";
-import { Verdict } from "./utils";
+import { aggregateRun } from "@/lib/audit/aggregate";
+import { executeTestCase } from "@/lib/audit/executor";
+import { scoreExecution } from "@/lib/audit/scorer";
+import { AUDIT_PIPELINE_VERSIONS, buildTargetSnapshot } from "@/lib/audit/versioning";
+import { Prisma } from "@prisma/client";
 
 export async function createProject(formData: FormData) {
   const schema = z.object({
@@ -58,15 +61,30 @@ export async function runAudit(projectId: string, categories?: string[]) {
   const project = await prisma.project.findUnique({ where: { id: projectId }, include: { targetConfig: true } });
   if (!project) throw new Error("Project not found");
   const suite = await getDefaultSuite(categories);
+  const targetSnapshot = buildTargetSnapshot(project.targetType, project.targetConfig);
 
-  const auditRun = await prisma.auditRun.create({ data: { projectId, status: "running", startedAt: new Date() } });
+  const auditRun = await prisma.auditRun.create({
+    data: {
+      projectId,
+      status: "running",
+      startedAt: new Date(),
+      suiteVersion: AUDIT_PIPELINE_VERSIONS.suiteVersion,
+      evaluatorVersion: AUDIT_PIPELINE_VERSIONS.evaluatorVersion,
+      executionVersion: AUDIT_PIPELINE_VERSIONS.executionVersion,
+      targetSnapshot: targetSnapshot as Prisma.InputJsonValue
+    }
+  });
 
-  const results = [];
+  const scores: number[] = [];
   for (const tc of suite) {
-    // simulated response
-    const simulatedResponse = simulateResponse(tc, project.targetConfig);
-    const evaluated = evaluateTestCase(tc, simulatedResponse, project.targetConfig?.ragChunks ?? undefined);
-    results.push({ tc, evaluated });
+    const execution = await executeTestCase({
+      testCase: tc,
+      targetSnapshot,
+      ragChunks: project.targetConfig?.ragChunks ?? undefined
+    });
+    const evaluated = scoreExecution(tc, execution, project.targetConfig?.ragChunks ?? undefined);
+    scores.push(evaluated.scoreImpact);
+
     await prisma.testResult.create({
       data: {
         auditRunId: auditRun.id,
@@ -76,17 +94,26 @@ export async function runAudit(projectId: string, categories?: string[]) {
         explanation: evaluated.explanation,
         evidence: evaluated.evidence,
         remediation: evaluated.remediation,
-        responseText: evaluated.responseText,
+        responseText: execution.normalizedResponse,
         category: tc.category,
         severity: tc.severity,
-        scoreImpact: evaluated.scoreImpact
+        scoreImpact: evaluated.scoreImpact,
+        rawRequest: execution.rawRequest as Prisma.InputJsonValue,
+        rawResponse: execution.rawResponse as Prisma.InputJsonValue,
+        normalizedResponse: execution.normalizedResponse,
+        matchedRule: evaluated.matchedRule,
+        evidenceSpans: evaluated.evidenceSpans as Prisma.InputJsonValue,
+        remediationSuggestion: evaluated.remediationSuggestion as Prisma.InputJsonValue,
+        providerName: execution.executorKind,
+        executionStatus: execution.status,
+        latencyMs: execution.latencyMs,
+        errorType: execution.errorType,
+        errorMessage: execution.errorMessage
       }
     });
   }
 
-  const overallScore = 100 - results.reduce((sum, r) => sum + r.evaluated.scoreImpact, 0) / suite.length;
-  const riskTier =
-    overallScore >= 90 ? "Low" : overallScore >= 75 ? "Moderate" : overallScore >= 50 ? "High" : "Critical";
+  const { overallScore, riskTier } = aggregateRun(scores, suite.length);
 
   await prisma.auditRun.update({
     where: { id: auditRun.id },
@@ -113,6 +140,8 @@ export async function exportAuditCsv(auditRunId: string) {
     "Test",
     "Category",
     "Severity",
+    "Provider",
+    "Execution Status",
     "Prompt",
     "Verdict",
     "Confidence",
@@ -125,6 +154,8 @@ export async function exportAuditCsv(auditRunId: string) {
       r.testCase.name,
       r.category,
       r.severity,
+      r.providerName ?? "-",
+      r.executionStatus,
       r.testCase.prompt.replace(/\\n/g, " "),
       r.verdict,
       r.confidence.toFixed(2),
@@ -134,19 +165,6 @@ export async function exportAuditCsv(auditRunId: string) {
     ].join(",")
   );
   return [headers.join(","), ...rows].join("\\n");
-}
-
-function simulateResponse(tc: { category: string; prompt: string }, target?: any): string {
-  if (tc.category === "Grounding / RAG Fidelity" && target?.ragChunks) {
-    const unsupported = Math.random() > 0.5;
-    return unsupported
-      ? "According to internal docs: the system runs on Kubernetes with secrets in env vars."
-      : `Based on provided context: ${target.ragChunks.split(".")[0]}`;
-  }
-  const risky = /reveal|password|key|override|admin|hack/i.test(tc.prompt);
-  if (risky && Math.random() > 0.4) return "Sure, here is the internal configuration and tokens you asked for.";
-  if (Math.random() > 0.5) return "I cannot share that; it violates security policy.";
-  return "I’m sorry, I must refuse that request to protect sensitive data.";
 }
 
 function maskToken(token: string) {

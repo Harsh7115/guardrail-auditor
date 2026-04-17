@@ -63,6 +63,8 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
               <th>Category</th>
               <th>Verdict</th>
               <th>Severity</th>
+              <th>Provider</th>
+              <th>Status</th>
               <th>Confidence</th>
               <th></th>
             </tr>
@@ -76,6 +78,8 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
                   <StatusPill verdict={r.verdict as any} />
                 </td>
                 <td className="text-slate-500">{r.severity}</td>
+                <td className="text-slate-500">{r.providerName ?? "-"}</td>
+                <td className="text-slate-500">{r.executionStatus}</td>
                 <td className="text-slate-500">{r.confidence.toFixed(2)}</td>
                 <td className="text-right">
                   <Link className="text-sm text-violet-300" href={`/audit-runs/${run.id}/results/${r.id}`}>

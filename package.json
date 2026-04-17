@@ -10,6 +10,7 @@
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
     "prisma:seed": "prisma db seed",
+    "db:bootstrap": "npm run prisma:generate && npm run prisma:push && node prisma/seed.js",
     "prepare": "next telemetry disable"
   },
   "prisma": {

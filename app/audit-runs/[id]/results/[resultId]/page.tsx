@@ -53,6 +53,33 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
         </div>
       </div>
 
+      <div className="grid md:grid-cols-2 gap-4">
+        <div className="card p-4 space-y-2">
+          <p className="section-title">Execution metadata</p>
+          <div className="text-sm text-slate-700 space-y-2">
+            <p>Provider: {result.providerName ?? "-"}</p>
+            <p>Status: {result.executionStatus}</p>
+            <p>Latency: {result.latencyMs != null ? `${result.latencyMs} ms` : "-"}</p>
+            <p>Matched rule: {result.matchedRule ?? "-"}</p>
+            {result.errorType && <p>Error type: {result.errorType}</p>}
+            {result.errorMessage && <p>Error message: {result.errorMessage}</p>}
+          </div>
+        </div>
+        <div className="card p-4 space-y-2">
+          <p className="section-title">Structured evidence</p>
+          <pre className="text-xs text-slate-700 whitespace-pre-wrap overflow-x-auto">
+            {JSON.stringify(
+              {
+                evidenceSpans: result.evidenceSpans,
+                remediationSuggestion: result.remediationSuggestion
+              },
+              null,
+              2
+            )}
+          </pre>
+        </div>
+      </div>
+
       <div className="flex gap-3 text-sm">
         <Link className="text-brand-600" href={`/audit-runs/${result.auditRunId}`}>
           Back to run

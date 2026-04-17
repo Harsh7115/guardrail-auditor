@@ -42,10 +42,15 @@ model AuditRun {
   projectId    String
   project      Project      @relation(fields: [projectId], references: [id])
   status       String       @default("pending")
+  statusMessage String?
   startedAt    DateTime     @default(now())
   completedAt  DateTime?
   overallScore Float?
   riskTier     String?
+  suiteVersion String       @default("default-suite@v1")
+  evaluatorVersion String   @default("heuristic-evaluator@v2")
+  executionVersion String   @default("modular-executor@v1")
+  targetSnapshot Json?
   results      TestResult[]
 }
 
@@ -73,6 +78,17 @@ model TestResult {
   evidence     String
   remediation  String
   responseText String
+  rawRequest   Json?
+  rawResponse  Json?
+  normalizedResponse String?
+  matchedRule  String?
+  evidenceSpans Json?
+  remediationSuggestion Json?
+  providerName String?
+  executionStatus String @default("completed")
+  latencyMs    Int?
+  errorType    String?
+  errorMessage String?
   category     String
   severity     String
   scoreImpact  Float
