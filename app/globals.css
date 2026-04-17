@@ -196,3 +196,28 @@ label { @apply text-sm font-medium text-slate-300; }
 .key-value {
   @apply text-right text-slate-200;
 }
+
+.timeline-row {
+  @apply relative border-l pl-5;
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.timeline-row::before {
+  content: "";
+  position: absolute;
+  left: -5px;
+  top: 0.35rem;
+  height: 10px;
+  width: 10px;
+  border-radius: 9999px;
+  background: rgba(124, 58, 237, 0.9);
+  box-shadow: 0 0 0 4px rgba(124, 58, 237, 0.14);
+}
+
+.surface-header {
+  @apply text-sm uppercase tracking-[0.18em] text-slate-500;
+}
+
+.surface-copy {
+  @apply text-sm leading-7 text-slate-300;
+}
