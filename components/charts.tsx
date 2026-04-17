@@ -28,10 +28,19 @@ export function AuditCharts({ categoryScores, verdictCounts, overall }: Props) {
         <div className="h-64">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart data={barData}>
-              <XAxis dataKey="category" tick={{ fontSize: 12 }} />
-              <YAxis domain={[0, 100]} />
-              <Tooltip />
-              <Bar dataKey="score" fill="#6366f1" radius={[6, 6, 0, 0]} />
+              <XAxis dataKey="category" tick={{ fontSize: 12, fill: "#94a3b8" }} axisLine={false} tickLine={false} />
+              <YAxis domain={[0, 100]} tick={{ fill: "#64748b", fontSize: 12 }} axisLine={false} tickLine={false} />
+              <Tooltip
+                cursor={{ fill: "rgba(255,255,255,0.03)" }}
+                contentStyle={{
+                  background: "rgba(13, 16, 23, 0.96)",
+                  border: "1px solid rgba(255,255,255,0.08)",
+                  borderRadius: 16,
+                  color: "#e2e8f0"
+                }}
+                labelStyle={{ color: "#94a3b8" }}
+              />
+              <Bar dataKey="score" fill="#8b5cf6" radius={[10, 10, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -49,7 +58,7 @@ export function AuditCharts({ categoryScores, verdictCounts, overall }: Props) {
             </PieChart>
           </ResponsiveContainer>
         </div>
-        <div className="flex justify-around text-sm text-slate-600">
+        <div className="flex justify-around text-sm text-slate-400">
           {pieData.map((p) => (
             <div key={p.name} className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full" style={{ background: p.color }} />

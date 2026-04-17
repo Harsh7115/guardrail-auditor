@@ -27,11 +27,11 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="card card-strong flex flex-col gap-5 p-6 md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-sm text-brand-600 font-semibold">Audit run</p>
-          <h1 className="text-3xl font-bold">{run.project.name}</h1>
-          <p className="text-slate-600 mt-1">Started {formatDate(run.startedAt)}</p>
+          <p className="text-sm uppercase tracking-[0.18em] text-slate-500">Audit run</p>
+          <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{run.project.name}</h1>
+          <p className="mt-3 text-sm text-slate-300">Started {formatDate(run.startedAt)}</p>
           <p className="text-sm text-slate-500">Risk tier: {run.riskTier}</p>
         </div>
         <div className="flex items-center gap-3">
@@ -48,10 +48,10 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
         <div className="flex items-center justify-between">
           <h2 className="section-title">Test results</h2>
           <div className="flex gap-3 text-sm">
-            <Link href={`/api/audit-runs/${run.id}/export?format=json`} className="text-brand-600">
+            <Link href={`/api/audit-runs/${run.id}/export?format=json`} className="text-violet-300">
               Export JSON
             </Link>
-            <Link href={`/api/audit-runs/${run.id}/export?format=csv`} className="text-brand-600">
+            <Link href={`/api/audit-runs/${run.id}/export?format=csv`} className="text-violet-300">
               Export CSV
             </Link>
           </div>
@@ -78,7 +78,7 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
                 <td className="text-slate-500">{r.severity}</td>
                 <td className="text-slate-500">{r.confidence.toFixed(2)}</td>
                 <td className="text-right">
-                  <Link className="text-brand-600 text-sm" href={`/audit-runs/${run.id}/results/${r.id}`}>
+                  <Link className="text-sm text-violet-300" href={`/audit-runs/${run.id}/results/${r.id}`}>
                     View
                   </Link>
                 </td>

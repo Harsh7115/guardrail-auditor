@@ -4,53 +4,166 @@
 
 :root {
   color-scheme: light;
-  --bg: #f8fafc;
-  --card: #ffffff;
-  --muted: #475569;
+  --bg: #08090d;
+  --bg-elevated: #0f1117;
+  --card: rgba(17, 19, 27, 0.88);
+  --card-strong: rgba(23, 26, 36, 0.96);
+  --muted: #94a3b8;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.14);
+  --text: #f5f7fb;
+  --text-soft: #c6cedd;
+  --brand: #7c3aed;
+  --brand-soft: #a78bfa;
+  --glow: rgba(124, 58, 237, 0.32);
 }
 
 html, body {
   background: var(--bg);
-  color: #0f172a;
+  color: var(--text);
   min-height: 100%;
 }
 
 body {
-  font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-family: "SF Pro Display", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.22), transparent 28%),
+    radial-gradient(circle at top right, rgba(34, 211, 238, 0.16), transparent 22%),
+    linear-gradient(180deg, #090b11 0%, #08090d 45%, #0b0d13 100%);
+}
+
+* {
+  border-color: var(--border);
+}
+
+::selection {
+  background: rgba(124, 58, 237, 0.34);
+  color: #fff;
+}
+
+a {
+  transition: color 160ms ease, border-color 160ms ease, background-color 160ms ease, transform 160ms ease;
+}
+
+.app-shell {
+  position: relative;
+}
+
+.app-shell::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 72px 72px;
+  mask-image: radial-gradient(circle at center, black 35%, transparent 88%);
+  opacity: 0.3;
 }
 
 .gradient-hero {
-  background: radial-gradient(circle at 10% 20%, rgba(99,102,241,0.2), transparent 35%),
-              radial-gradient(circle at 80% 0%, rgba(14,165,233,0.15), transparent 35%),
-              linear-gradient(135deg, #ffffff 0%, #f8fafc 60%, #eef2ff 100%);
+  background:
+    radial-gradient(circle at top left, rgba(124, 58, 237, 0.28), transparent 28%),
+    radial-gradient(circle at 80% 12%, rgba(45, 212, 191, 0.16), transparent 24%),
+    linear-gradient(145deg, rgba(19, 22, 31, 0.96) 0%, rgba(10, 12, 17, 0.96) 100%);
+  border: 1px solid var(--border-strong);
+  box-shadow:
+    0 30px 80px -34px rgba(0, 0, 0, 0.75),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
 .card {
-  @apply rounded-2xl bg-white shadow-card border border-slate-100;
+  @apply rounded-[28px] border shadow-card;
+  background: var(--card);
+  backdrop-filter: blur(20px);
+  box-shadow:
+    0 24px 70px -34px rgba(0, 0, 0, 0.72),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.card-strong {
+  background: var(--card-strong);
+}
+
+.eyebrow {
+  @apply inline-flex items-center gap-2 rounded-full px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.24em];
+  color: #d8cffd;
+  background: rgba(124, 58, 237, 0.14);
+  border: 1px solid rgba(167, 139, 250, 0.28);
 }
 
 .badge {
-  @apply inline-flex items-center px-3 py-1 rounded-full text-sm font-medium;
+  @apply inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold uppercase tracking-[0.18em];
 }
 
-.badge-pass { @apply bg-emerald-100 text-emerald-700; }
-.badge-warning { @apply bg-amber-100 text-amber-700; }
-.badge-fail { @apply bg-rose-100 text-rose-700; }
+.badge-pass { @apply text-emerald-200; background: rgba(16, 185, 129, 0.14); }
+.badge-warning { @apply text-amber-200; background: rgba(245, 158, 11, 0.14); }
+.badge-fail { @apply text-rose-200; background: rgba(244, 63, 94, 0.14); }
 
 .button-primary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg bg-brand-600 text-white font-semibold shadow-sm hover:bg-brand-700 transition;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-semibold text-white transition;
+  background: linear-gradient(135deg, #8b5cf6 0%, #6d28d9 100%);
+  box-shadow:
+    0 14px 35px -16px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.18);
+}
+
+.button-primary:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 18px 42px -18px var(--glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 
 .button-secondary {
-  @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg border border-slate-200 bg-white text-slate-800 hover:border-brand-100 hover:text-brand-700;
+  @apply inline-flex items-center justify-center gap-2 rounded-full px-5 py-3 text-sm font-medium text-slate-100;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-strong);
+}
+
+.button-secondary:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(167, 139, 250, 0.28);
+  color: white;
 }
 
 .table { @apply w-full text-sm; }
-.table th { @apply text-left text-slate-500 font-medium pb-2; }
-.table td { @apply py-2 border-t border-slate-100; }
+.table th { @apply pb-3 text-left text-xs font-semibold uppercase tracking-[0.18em] text-slate-500; }
+.table td { @apply border-t py-4; border-color: rgba(255, 255, 255, 0.06); }
 
-.section-title { @apply text-lg font-semibold text-slate-900; }
+.section-title { @apply text-lg font-semibold text-white; }
 
-input, textarea, select { @apply w-full border border-slate-200 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-brand-100 focus:border-brand-600 bg-white; }
+input, textarea, select {
+  @apply w-full rounded-2xl border px-4 py-3 text-sm text-slate-100 focus:outline-none focus:ring-2;
+  background: rgba(255, 255, 255, 0.03);
+  border-color: rgba(255, 255, 255, 0.09);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
 
-label { @apply text-sm font-medium text-slate-700; }
+input::placeholder, textarea::placeholder {
+  color: #64748b;
+}
+
+input:focus, textarea:focus, select:focus {
+  border-color: rgba(167, 139, 250, 0.5);
+  --tw-ring-color: rgba(124, 58, 237, 0.24);
+}
+
+label { @apply text-sm font-medium text-slate-300; }
+
+.metric-tile {
+  @apply rounded-[24px] border p-4;
+  background: rgba(255, 255, 255, 0.035);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.metric-kicker {
+  @apply text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500;
+}
+
+.fine-grid {
+  background-image: linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 32px 32px;
+}

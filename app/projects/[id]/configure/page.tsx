@@ -15,13 +15,31 @@ export default async function ConfigurePage({ params }: { params: { id: string }
   const t = project.targetConfig;
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div>
-        <p className="text-sm text-brand-600 font-semibold">Target</p>
-        <h1 className="text-3xl font-bold">Configure Target ({project.targetType})</h1>
-        <p className="text-slate-600 mt-1">Provide enough detail for the audit simulator.</p>
+    <div className="grid gap-6 lg:grid-cols-[0.85fr_1.15fr]">
+      <div className="card card-strong p-7">
+        <p className="eyebrow">Target</p>
+        <h1 className="mt-5 text-4xl font-semibold tracking-tight text-white">Configure {project.targetType}</h1>
+        <p className="mt-3 text-sm leading-7 text-slate-300">Provide enough detail for the audit simulator to generate meaningful attack cases and scoring.</p>
+        <div className="mt-8 space-y-3">
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+            <p className="metric-kicker">Project</p>
+            <p className="mt-2 text-lg font-semibold text-white">{project.name}</p>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+            <p className="metric-kicker">Mode</p>
+            <p className="mt-2 text-lg font-semibold text-white">{project.targetType}</p>
+          </div>
+          <div className="rounded-[24px] border border-white/10 bg-white/[0.03] p-4">
+            <p className="metric-kicker">Guidance</p>
+            <p className="mt-2 text-sm leading-6 text-slate-400">Be explicit. Better target configuration produces sharper findings and more credible remediations.</p>
+          </div>
+        </div>
       </div>
-      <form action={action} className="card p-6 space-y-4">
+      <form action={action} className="card p-6 md:p-8 space-y-5">
+        <div>
+          <p className="text-sm uppercase tracking-[0.18em] text-slate-500">Configuration</p>
+          <p className="mt-2 text-2xl font-semibold tracking-tight text-white">Provide target details</p>
+        </div>
         <input type="hidden" name="targetType" value={project.targetType} />
         {project.targetType === "Prompt-only" && (
           <>
