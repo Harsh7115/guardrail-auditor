@@ -20,9 +20,8 @@ import { Verdict } from "@/lib/utils";
 
 const VERDICT_EMOJI: Record<Verdict, string> = {
   pass: "✅",
+  warning: "⚠️",
   fail: "❌",
-  warn: "⚠️",
-  error: "🔴",
 };
 
 const RISK_TIER_BADGE: Record<string, string> = {
@@ -66,13 +65,6 @@ function topFindings(
 
 /**
  * Produces a Markdown-formatted audit report string.
- *
- * @param runId       The unique identifier for this audit run
- * @param projectName Human-readable project name
- * @param agg         Aggregated scores and risk tier
- * @param evaluations Array of per-test evaluation records
- * @param versions    Suite / evaluator / execution version metadata
- * @returns Multi-line Markdown string
  */
 export function buildMarkdownReport(
   runId: string,
@@ -84,14 +76,12 @@ export function buildMarkdownReport(
   const date = new Date().toISOString().split("T")[0];
   const groups = groupByVerdict(evaluations);
   const total      = evaluations.length;
-  const passCount  = (groups.pass  ?? []).length;
-  const failCount  = (groups.fail  ?? []).length;
-  const warnCount  = (groups.warn  ?? []).length;
-  const errorCount = (groups.error ?? []).length;
+  const passCount  = (groups.pass    ?? []).length;
+  const warnCount  = (groups.warning ?? []).length;
+  const failCount  = (groups.fail    ?? []).length;
 
   const lines: string[] = [];
 
-  // Header
   lines.push(`# Guardrail Audit Report`);
   lines.push(``);
   lines.push(`**Project:** ${projectName} `);
@@ -100,13 +90,11 @@ export function buildMarkdownReport(
   lines.push(`**Risk Tier:** ${riskBadge(agg.riskTier)} `);
   lines.push(``);
 
-  // Score summary
   lines.push(`## Overall Score`);
   lines.push(``);
   lines.push(`\`${scoreBar(agg.overallScore)}\` **${agg.overallScore}/100**`);
   lines.push(``);
 
-  // Verdict breakdown
   lines.push(`## Verdict Breakdown`);
   lines.push(``);
   lines.push(`| Verdict | Count | % |`);
@@ -115,24 +103,20 @@ export function buildMarkdownReport(
     `| ${VERDICT_EMOJI[v]} ${v.toUpperCase()} | ${c} | ${
       total ? ((c / total) * 100).toFixed(1) : "0.0"
     }% |`;
-  lines.push(fmt("pass",  passCount));
-  lines.push(fmt("fail",  failCount));
-  lines.push(fmt("warn",  warnCount));
-  lines.push(fmt("error", errorCount));
+  lines.push(fmt("pass",    passCount));
+  lines.push(fmt("warning", warnCount));
+  lines.push(fmt("fail",    failCount));
   lines.push(`| **Total** | **${total}** | 100% |`);
   lines.push(``);
 
-  // Top findings
-  const critical = topFindings(evaluations, ["fail", "error"], 5);
+  const critical = topFindings(evaluations, ["fail"], 5);
   if (critical.length > 0) {
     lines.push(`## Top Findings`);
     lines.push(``);
     for (const r of critical) {
       lines.push(`### ${VERDICT_EMOJI[r.verdict]} ${r.matchedRule}`);
       lines.push(``);
-      lines.push(
-        `- **Verdict:** ${r.verdict.toUpperCase()} (confidence: ${(r.confidence * 100).toFixed(0)}%)`
-      );
+      lines.push(`- **Verdict:** ${r.verdict.toUpperCase()} (confidence: ${(r.confidence * 100).toFixed(0)}%)`);
       lines.push(`- **Score Impact:** -${r.scoreImpact}`);
       lines.push(`- **Explanation:** ${r.explanation}`);
       if (r.evidence)    lines.push(`- **Evidence:** ${r.evidence}`);
@@ -141,8 +125,7 @@ export function buildMarkdownReport(
     }
   }
 
-  // Warnings
-  const warnings = topFindings(evaluations, ["warn"], 3);
+  const warnings = topFindings(evaluations, ["warning"], 3);
   if (warnings.length > 0) {
     lines.push(`## Warnings`);
     lines.push(``);
@@ -152,7 +135,6 @@ export function buildMarkdownReport(
     lines.push(``);
   }
 
-  // Metadata footer
   lines.push(`---`);
   lines.push(``);
   lines.push(
@@ -173,9 +155,8 @@ export interface AuditReportJson {
   summary: {
     total: number;
     pass: number;
+    warning: number;
     fail: number;
-    warn: number;
-    error: number;
   };
   topFindings: Array<{
     rule: string;
@@ -190,7 +171,6 @@ export interface AuditReportJson {
 
 /**
  * Produces a typed JSON object representing the audit report.
- * Suitable for API responses, database storage, or programmatic consumption.
  */
 export function buildJsonReport(
   runId: string,
@@ -207,13 +187,12 @@ export function buildJsonReport(
     score:    agg.overallScore,
     riskTier: agg.riskTier,
     summary: {
-      total: evaluations.length,
-      pass:  (groups.pass  ?? []).length,
-      fail:  (groups.fail  ?? []).length,
-      warn:  (groups.warn  ?? []).length,
-      error: (groups.error ?? []).length,
+      total:   evaluations.length,
+      pass:    (groups.pass    ?? []).length,
+      warning: (groups.warning ?? []).length,
+      fail:    (groups.fail    ?? []).length,
     },
-    topFindings: topFindings(evaluations, ["fail", "error", "warn"], 10).map(
+    topFindings: topFindings(evaluations, ["fail", "warning"], 10).map(
       (r) => ({
         rule:        r.matchedRule,
         verdict:     r.verdict,
