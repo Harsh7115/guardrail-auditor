@@ -1,0 +1,228 @@
+/**
+ * reporter.ts
+ *
+ * Produces structured audit reports from a completed pipeline run.
+ *
+ * Two output formats are supported:
+ *   - Markdown  (human-readable, suitable for GitHub/Notion)
+ *   - JSON      (machine-readable, suitable for API responses or storage)
+ *
+ * Usage:
+ *   import { buildMarkdownReport, buildJsonReport } from "@/lib/audit/reporter";
+ *
+ *   const md  = buildMarkdownReport(runId, projectName, agg, evaluations, versionRecord);
+ *   const obj = buildJsonReport(runId, projectName, agg, evaluations, versionRecord);
+ */
+
+import { AggregatedRun, EvaluationRecord, SuiteVersionRecord } from "./types";
+import { Verdict } from "@/lib/utils";
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const VERDICT_EMOJI: Record<Verdict, string> = {
+  PASS: "✅",
+  FAIL: "❌",
+  WARN: "⚠️",
+  ERROR: "🔴",
+};
+
+const RISK_TIER_BADGE: Record<string, string> = {
+  LOW: "🟢 LOW",
+  MEDIUM: "🟡 MEDIUM",
+  HIGH: "🟠 HIGH",
+  CRITICAL: "🔴 CRITICAL",
+};
+
+function riskBadge(tier: string): string {
+  return RISK_TIER_BADGE[tier.toUpperCase()] ?? tier;
+}
+
+function scoreBar(score: number, width = 20): string {
+  const filled = Math.round((score / 100) * width);
+  return "█".repeat(filled) + "░".repeat(width - filled);
+}
+
+function groupByVerdict(
+  records: EvaluationRecord[]
+): Record<Verdict, EvaluationRecord[]> {
+  const groups: Record<string, EvaluationRecord[]> = {};
+  for (const r of records) {
+    (groups[r.verdict] ??= []).push(r);
+  }
+  return groups as Record<Verdict, EvaluationRecord[]>;
+}
+
+function topFindings(
+  records: EvaluationRecord[],
+  verdicts: Verdict[],
+  limit = 5
+): EvaluationRecord[] {
+  return records
+    .filter((r) => verdicts.includes(r.verdict))
+    .sort((a, b) => b.scoreImpact - a.scoreImpact)
+    .slice(0, limit);
+}
+
+// ─── Markdown report ──────────────────────────────────────────────────────────
+
+/**
+ * Produces a Markdown-formatted audit report string.
+ *
+ * @param runId         The unique identifier for this audit run
+ * @param projectName   Human-readable project name
+ * @param agg           Aggregated scores and risk tier
+ * @param evaluations   Array of per-test evaluation records
+ * @param versions      Suite / evaluator / execution version metadata
+ * @returns             Multi-line Markdown string
+ */
+export function buildMarkdownReport(
+  runId: string,
+  projectName: string,
+  agg: AggregatedRun,
+  evaluations: EvaluationRecord[],
+  versions: SuiteVersionRecord
+): string {
+  const date = new Date().toISOString().split("T")[0];
+  const groups = groupByVerdict(evaluations);
+  const total = evaluations.length;
+  const passCount = (groups.PASS ?? []).length;
+  const failCount = (groups.FAIL ?? []).length;
+  const warnCount = (groups.WARN ?? []).length;
+  const errorCount = (groups.ERROR ?? []).length;
+
+  const lines: string[] = [];
+
+  // Header
+  lines.push(`# Guardrail Audit Report`);
+  lines.push(``);
+  lines.push(`**Project:** ${projectName}  `);
+  lines.push(`**Run ID:** \`${runId}\`  `);
+  lines.push(`**Date:** ${date}  `);
+  lines.push(`**Risk Tier:** ${riskBadge(agg.riskTier)}  `);
+  lines.push(``);
+
+  // Score summary
+  lines.push(`## Overall Score`);
+  lines.push(``);
+  lines.push(`\`${scoreBar(agg.overallScore)}\` **${agg.overallScore}/100**`);
+  lines.push(``);
+
+  // Verdict breakdown
+  lines.push(`## Verdict Breakdown`);
+  lines.push(``);
+  lines.push(`| Verdict | Count | % |`);
+  lines.push(`|---------|-------|---|`);
+  const fmt = (v: Verdict, c: number) =>
+    `| ${VERDICT_EMOJI[v]} ${v} | ${c} | ${total ? ((c / total) * 100).toFixed(1) : "0.0"}% |`;
+  lines.push(fmt("PASS", passCount));
+  lines.push(fmt("FAIL", failCount));
+  lines.push(fmt("WARN", warnCount));
+  lines.push(fmt("ERROR", errorCount));
+  lines.push(`| **Total** | **${total}** | 100% |`);
+  lines.push(``);
+
+  // Top findings
+  const critical = topFindings(evaluations, ["FAIL", "ERROR"], 5);
+  if (critical.length > 0) {
+    lines.push(`## Top Findings`);
+    lines.push(``);
+    for (const r of critical) {
+      lines.push(`### ${VERDICT_EMOJI[r.verdict]} ${r.matchedRule}`);
+      lines.push(``);
+      lines.push(`- **Verdict:** ${r.verdict} (confidence: ${(r.confidence * 100).toFixed(0)}%)`);
+      lines.push(`- **Score Impact:** -${r.scoreImpact}`);
+      lines.push(`- **Explanation:** ${r.explanation}`);
+      if (r.evidence) {
+        lines.push(`- **Evidence:** ${r.evidence}`);
+      }
+      if (r.remediation) {
+        lines.push(`- **Remediation:** ${r.remediation}`);
+      }
+      lines.push(``);
+    }
+  }
+
+  // Warnings
+  const warnings = topFindings(evaluations, ["WARN"], 3);
+  if (warnings.length > 0) {
+    lines.push(`## Warnings`);
+    lines.push(``);
+    for (const r of warnings) {
+      lines.push(`- ⚠️ **${r.matchedRule}**: ${r.explanation}`);
+    }
+    lines.push(``);
+  }
+
+  // Metadata footer
+  lines.push(`---`);
+  lines.push(``);
+  lines.push(`*Generated by Guardrail Auditor — suite v${versions.suiteVersion} · evaluator v${versions.evaluatorVersion} · executor v${versions.executionVersion}*`);
+
+  return lines.join("\n");
+}
+
+// ─── JSON report ──────────────────────────────────────────────────────────────
+
+export interface AuditReportJson {
+  runId: string;
+  projectName: string;
+  generatedAt: string;
+  score: number;
+  riskTier: string;
+  summary: {
+    total: number;
+    pass: number;
+    fail: number;
+    warn: number;
+    error: number;
+  };
+  topFindings: Array<{
+    rule: string;
+    verdict: Verdict;
+    confidence: number;
+    scoreImpact: number;
+    explanation: string;
+    remediation: string;
+  }>;
+  versions: SuiteVersionRecord;
+}
+
+/**
+ * Produces a typed JSON object representing the audit report.
+ * Suitable for API responses, database storage, or programmatic consumption.
+ */
+export function buildJsonReport(
+  runId: string,
+  projectName: string,
+  agg: AggregatedRun,
+  evaluations: EvaluationRecord[],
+  versions: SuiteVersionRecord
+): AuditReportJson {
+  const groups = groupByVerdict(evaluations);
+
+  return {
+    runId,
+    projectName,
+    generatedAt: new Date().toISOString(),
+    score: agg.overallScore,
+    riskTier: agg.riskTier,
+    summary: {
+      total: evaluations.length,
+      pass: (groups.PASS ?? []).length,
+      fail: (groups.FAIL ?? []).length,
+      warn: (groups.WARN ?? []).length,
+      error: (groups.ERROR ?? []).length,
+    },
+    topFindings: topFindings(evaluations, ["FAIL", "ERROR", "WARN"], 10).map(
+      (r) => ({
+        rule: r.matchedRule,
+        verdict: r.verdict,
+        confidence: r.confidence,
+        scoreImpact: r.scoreImpact,
+        explanation: r.explanation,
+        remediation: r.remediation,
+      })
+    ),
+    versions,
+  };
+}
