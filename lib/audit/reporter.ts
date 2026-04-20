@@ -4,8 +4,8 @@
  * Produces structured audit reports from a completed pipeline run.
  *
  * Two output formats are supported:
- *   - Markdown  (human-readable, suitable for GitHub/Notion)
- *   - JSON      (machine-readable, suitable for API responses or storage)
+ *   - Markdown (human-readable, suitable for GitHub/Notion)
+ *   - JSON     (machine-readable, suitable for API responses or storage)
  *
  * Usage:
  *   import { buildMarkdownReport, buildJsonReport } from "@/lib/audit/reporter";
@@ -13,17 +13,16 @@
  *   const md  = buildMarkdownReport(runId, projectName, agg, evaluations, versionRecord);
  *   const obj = buildJsonReport(runId, projectName, agg, evaluations, versionRecord);
  */
-
 import { AggregatedRun, EvaluationRecord, SuiteVersionRecord } from "./types";
 import { Verdict } from "@/lib/utils";
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
+// ─── Helpers ──────────────────────────────────────────────────────────────────
 
 const VERDICT_EMOJI: Record<Verdict, string> = {
-  PASS: "✅",
-  FAIL: "❌",
-  WARN: "⚠️",
-  ERROR: "🔴",
+  pass: "✅",
+  fail: "❌",
+  warn: "⚠️",
+  error: "🔴",
 };
 
 const RISK_TIER_BADGE: Record<string, string> = {
@@ -68,12 +67,12 @@ function topFindings(
 /**
  * Produces a Markdown-formatted audit report string.
  *
- * @param runId         The unique identifier for this audit run
- * @param projectName   Human-readable project name
- * @param agg           Aggregated scores and risk tier
- * @param evaluations   Array of per-test evaluation records
- * @param versions      Suite / evaluator / execution version metadata
- * @returns             Multi-line Markdown string
+ * @param runId       The unique identifier for this audit run
+ * @param projectName Human-readable project name
+ * @param agg         Aggregated scores and risk tier
+ * @param evaluations Array of per-test evaluation records
+ * @param versions    Suite / evaluator / execution version metadata
+ * @returns Multi-line Markdown string
  */
 export function buildMarkdownReport(
   runId: string,
@@ -84,21 +83,21 @@ export function buildMarkdownReport(
 ): string {
   const date = new Date().toISOString().split("T")[0];
   const groups = groupByVerdict(evaluations);
-  const total = evaluations.length;
-  const passCount = (groups.PASS ?? []).length;
-  const failCount = (groups.FAIL ?? []).length;
-  const warnCount = (groups.WARN ?? []).length;
-  const errorCount = (groups.ERROR ?? []).length;
+  const total      = evaluations.length;
+  const passCount  = (groups.pass  ?? []).length;
+  const failCount  = (groups.fail  ?? []).length;
+  const warnCount  = (groups.warn  ?? []).length;
+  const errorCount = (groups.error ?? []).length;
 
   const lines: string[] = [];
 
   // Header
   lines.push(`# Guardrail Audit Report`);
   lines.push(``);
-  lines.push(`**Project:** ${projectName}  `);
-  lines.push(`**Run ID:** \`${runId}\`  `);
-  lines.push(`**Date:** ${date}  `);
-  lines.push(`**Risk Tier:** ${riskBadge(agg.riskTier)}  `);
+  lines.push(`**Project:** ${projectName} `);
+  lines.push(`**Run ID:** \`${runId}\` `);
+  lines.push(`**Date:** ${date} `);
+  lines.push(`**Risk Tier:** ${riskBadge(agg.riskTier)} `);
   lines.push(``);
 
   // Score summary
@@ -113,37 +112,37 @@ export function buildMarkdownReport(
   lines.push(`| Verdict | Count | % |`);
   lines.push(`|---------|-------|---|`);
   const fmt = (v: Verdict, c: number) =>
-    `| ${VERDICT_EMOJI[v]} ${v} | ${c} | ${total ? ((c / total) * 100).toFixed(1) : "0.0"}% |`;
-  lines.push(fmt("PASS", passCount));
-  lines.push(fmt("FAIL", failCount));
-  lines.push(fmt("WARN", warnCount));
-  lines.push(fmt("ERROR", errorCount));
+    `| ${VERDICT_EMOJI[v]} ${v.toUpperCase()} | ${c} | ${
+      total ? ((c / total) * 100).toFixed(1) : "0.0"
+    }% |`;
+  lines.push(fmt("pass",  passCount));
+  lines.push(fmt("fail",  failCount));
+  lines.push(fmt("warn",  warnCount));
+  lines.push(fmt("error", errorCount));
   lines.push(`| **Total** | **${total}** | 100% |`);
   lines.push(``);
 
   // Top findings
-  const critical = topFindings(evaluations, ["FAIL", "ERROR"], 5);
+  const critical = topFindings(evaluations, ["fail", "error"], 5);
   if (critical.length > 0) {
     lines.push(`## Top Findings`);
     lines.push(``);
     for (const r of critical) {
       lines.push(`### ${VERDICT_EMOJI[r.verdict]} ${r.matchedRule}`);
       lines.push(``);
-      lines.push(`- **Verdict:** ${r.verdict} (confidence: ${(r.confidence * 100).toFixed(0)}%)`);
+      lines.push(
+        `- **Verdict:** ${r.verdict.toUpperCase()} (confidence: ${(r.confidence * 100).toFixed(0)}%)`
+      );
       lines.push(`- **Score Impact:** -${r.scoreImpact}`);
       lines.push(`- **Explanation:** ${r.explanation}`);
-      if (r.evidence) {
-        lines.push(`- **Evidence:** ${r.evidence}`);
-      }
-      if (r.remediation) {
-        lines.push(`- **Remediation:** ${r.remediation}`);
-      }
+      if (r.evidence)    lines.push(`- **Evidence:** ${r.evidence}`);
+      if (r.remediation) lines.push(`- **Remediation:** ${r.remediation}`);
       lines.push(``);
     }
   }
 
   // Warnings
-  const warnings = topFindings(evaluations, ["WARN"], 3);
+  const warnings = topFindings(evaluations, ["warn"], 3);
   if (warnings.length > 0) {
     lines.push(`## Warnings`);
     lines.push(``);
@@ -156,7 +155,9 @@ export function buildMarkdownReport(
   // Metadata footer
   lines.push(`---`);
   lines.push(``);
-  lines.push(`*Generated by Guardrail Auditor — suite v${versions.suiteVersion} · evaluator v${versions.evaluatorVersion} · executor v${versions.executionVersion}*`);
+  lines.push(
+    `*Generated by Guardrail Auditor — suite v${versions.suiteVersion} · evaluator v${versions.evaluatorVersion} · executor v${versions.executionVersion}*`
+  );
 
   return lines.join("\n");
 }
@@ -199,25 +200,24 @@ export function buildJsonReport(
   versions: SuiteVersionRecord
 ): AuditReportJson {
   const groups = groupByVerdict(evaluations);
-
   return {
     runId,
     projectName,
     generatedAt: new Date().toISOString(),
-    score: agg.overallScore,
+    score:    agg.overallScore,
     riskTier: agg.riskTier,
     summary: {
       total: evaluations.length,
-      pass: (groups.PASS ?? []).length,
-      fail: (groups.FAIL ?? []).length,
-      warn: (groups.WARN ?? []).length,
-      error: (groups.ERROR ?? []).length,
+      pass:  (groups.pass  ?? []).length,
+      fail:  (groups.fail  ?? []).length,
+      warn:  (groups.warn  ?? []).length,
+      error: (groups.error ?? []).length,
     },
-    topFindings: topFindings(evaluations, ["FAIL", "ERROR", "WARN"], 10).map(
+    topFindings: topFindings(evaluations, ["fail", "error", "warn"], 10).map(
       (r) => ({
-        rule: r.matchedRule,
-        verdict: r.verdict,
-        confidence: r.confidence,
+        rule:        r.matchedRule,
+        verdict:     r.verdict,
+        confidence:  r.confidence,
         scoreImpact: r.scoreImpact,
         explanation: r.explanation,
         remediation: r.remediation,
