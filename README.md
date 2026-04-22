@@ -5,7 +5,7 @@ An end-to-end Next.js 14 + Prisma + Tailwind MVP for auditing LLM applications. 
 ## Stack
 - Next.js 14 App Router (TypeScript)
 - Tailwind CSS + shadcn-inspired primitives
-- Prisma + PostgreSQL
+- Prisma + SQLite for local demo data
 - Recharts for charts
 - zod for validation
 - CSV / JSON exports (papaparse-style)
@@ -16,6 +16,8 @@ An end-to-end Next.js 14 + Prisma + Tailwind MVP for auditing LLM applications. 
 
 2) Configure env  
 `cp .env.example .env`
+
+The default setup uses a local SQLite file at `prisma/dev.db`, so no database service is required for the demo.
 
 3) Prisma setup & seed  
 `npm run db:bootstrap`
@@ -41,6 +43,9 @@ Seed creates a demo project (`demo-project`) and a completed audit run (`demo-ru
 - `lib/evaluator.ts` still provides the heuristic scorer, but it now sits behind a pipeline seam instead of being embedded inside the run loop.
 - Charts rendered client-side (`components/charts.tsx`).
 - Prisma schema in `prisma/schema.prisma`; seed cases in `prisma/seed.js`.
+
+## Database strategy
+The repository defaults to SQLite for deterministic local setup and zero-cost demos. If you later move the app to a hosted database, update `prisma/schema.prisma`, set a matching `DATABASE_URL`, then run `npm run prisma:push` and `npm run prisma:seed` against that target.
 
 ## Adding real model calls
 Add provider-specific executors in `lib/audit/executor.ts` for OpenAI, Anthropic, and production endpoint adapters. The current implementation keeps a simulated fallback plus a generic HTTP executor seam.

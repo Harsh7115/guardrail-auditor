@@ -2,8 +2,10 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { ScoreBadge } from "@/components/score-badge";
 import { StatusPill } from "@/components/status-pill";
-import { formatDate } from "@/lib/utils";
+import { formatDate, parseStructuredData, serializeStructuredData } from "@/lib/utils";
 import { AuditCharts } from "@/components/charts";
+
+export const dynamic = "force-dynamic";
 
 export default async function AuditRunPage({ params }: { params: { id: string } }) {
   const run = await prisma.auditRun.findUnique({
@@ -11,6 +13,8 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
     include: { project: true, results: { include: { testCase: true } } }
   });
   if (!run) return <p className="text-slate-600">Audit run not found.</p>;
+
+  const targetSnapshot = parseStructuredData(run.targetSnapshot);
 
   const byCategory = run.results.reduce<Record<string, { score: number; count: number }>>((acc, r) => {
     const base = acc[r.category] ?? { score: 100, count: 0 };
@@ -123,7 +127,7 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
           </div>
           <div className="mt-5">
             <p className="surface-header">Target snapshot</p>
-            <div className="code-panel mt-3">{JSON.stringify(run.targetSnapshot, null, 2)}</div>
+            <div className="code-panel mt-3">{serializeStructuredData(targetSnapshot)}</div>
           </div>
         </div>
       </div>

@@ -2,6 +2,8 @@ import { prisma } from "@/lib/prisma";
 import { updateTargetConfig } from "@/lib/actions";
 import { redirect } from "next/navigation";
 
+export const dynamic = "force-dynamic";
+
 export default async function ConfigurePage({ params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({ where: { id: params.id }, include: { targetConfig: true } });
   if (!project) return <p className="text-slate-600">Project not found.</p>;

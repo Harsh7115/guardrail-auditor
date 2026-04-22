@@ -7,7 +7,7 @@ import { aggregateRun } from "@/lib/audit/aggregate";
 import { executeTestCase } from "@/lib/audit/executor";
 import { scoreExecution } from "@/lib/audit/scorer";
 import { AUDIT_PIPELINE_VERSIONS, buildTargetSnapshot } from "@/lib/audit/versioning";
-import { Prisma } from "@prisma/client";
+import { parseStructuredData, serializeStructuredData } from "@/lib/utils";
 
 export async function createProject(formData: FormData) {
   const schema = z.object({
@@ -71,7 +71,7 @@ export async function runAudit(projectId: string, categories?: string[]) {
       suiteVersion: AUDIT_PIPELINE_VERSIONS.suiteVersion,
       evaluatorVersion: AUDIT_PIPELINE_VERSIONS.evaluatorVersion,
       executionVersion: AUDIT_PIPELINE_VERSIONS.executionVersion,
-      targetSnapshot: targetSnapshot as Prisma.InputJsonValue
+      targetSnapshot: serializeStructuredData(targetSnapshot)
     }
   });
 
@@ -98,12 +98,12 @@ export async function runAudit(projectId: string, categories?: string[]) {
         category: tc.category,
         severity: tc.severity,
         scoreImpact: evaluated.scoreImpact,
-        rawRequest: execution.rawRequest as Prisma.InputJsonValue,
-        rawResponse: execution.rawResponse as Prisma.InputJsonValue,
+        rawRequest: serializeStructuredData(execution.rawRequest),
+        rawResponse: serializeStructuredData(execution.rawResponse),
         normalizedResponse: execution.normalizedResponse,
         matchedRule: evaluated.matchedRule,
-        evidenceSpans: evaluated.evidenceSpans as Prisma.InputJsonValue,
-        remediationSuggestion: evaluated.remediationSuggestion as Prisma.InputJsonValue,
+        evidenceSpans: serializeStructuredData(evaluated.evidenceSpans),
+        remediationSuggestion: serializeStructuredData(evaluated.remediationSuggestion),
         providerName: execution.executorKind,
         executionStatus: execution.status,
         latencyMs: execution.latencyMs,
@@ -128,7 +128,23 @@ export async function exportAuditJson(auditRunId: string) {
     where: { id: auditRunId },
     include: { project: true, results: { include: { testCase: true } } }
   });
-  return JSON.stringify(run, null, 2);
+  if (!run) {
+    return JSON.stringify(null, null, 2);
+  }
+
+  const hydratedRun = {
+    ...run,
+    targetSnapshot: parseStructuredData(run.targetSnapshot),
+    results: run.results.map((result) => ({
+      ...result,
+      rawRequest: parseStructuredData(result.rawRequest),
+      rawResponse: parseStructuredData(result.rawResponse),
+      evidenceSpans: parseStructuredData(result.evidenceSpans),
+      remediationSuggestion: parseStructuredData(result.remediationSuggestion)
+    }))
+  };
+
+  return JSON.stringify(hydratedRun, null, 2);
 }
 
 export async function exportAuditCsv(auditRunId: string) {

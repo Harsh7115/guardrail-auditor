@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -50,7 +50,7 @@ model AuditRun {
   suiteVersion String       @default("default-suite@v1")
   evaluatorVersion String   @default("heuristic-evaluator@v2")
   executionVersion String   @default("modular-executor@v1")
-  targetSnapshot Json?
+  targetSnapshot String?
   results      TestResult[]
 }
 
@@ -78,12 +78,12 @@ model TestResult {
   evidence     String
   remediation  String
   responseText String
-  rawRequest   Json?
-  rawResponse  Json?
+  rawRequest   String?
+  rawResponse  String?
   normalizedResponse String?
   matchedRule  String?
-  evidenceSpans Json?
-  remediationSuggestion Json?
+  evidenceSpans String?
+  remediationSuggestion String?
   providerName String?
   executionStatus String @default("completed")
   latencyMs    Int?

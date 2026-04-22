@@ -3,6 +3,8 @@ import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { ScoreBadge } from "@/components/score-badge";
 
+export const dynamic = "force-dynamic";
+
 export default async function ProjectPage({ params }: { params: { id: string } }) {
   const project = await prisma.project.findUnique({
     where: { id: params.id },

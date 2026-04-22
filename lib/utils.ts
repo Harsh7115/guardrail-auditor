@@ -23,3 +23,17 @@ export function verdictColor(v: Verdict) {
       return 'badge-fail';
   }
 }
+
+export function serializeStructuredData(value: unknown) {
+  return JSON.stringify(value ?? null, null, 2);
+}
+
+export function parseStructuredData<T = unknown>(value?: string | null): T | null {
+  if (!value) return null;
+
+  try {
+    return JSON.parse(value) as T;
+  } catch {
+    return null;
+  }
+}

@@ -1,6 +1,9 @@
 import { prisma } from "@/lib/prisma";
 import { StatusPill } from "@/components/status-pill";
 import Link from "next/link";
+import { parseStructuredData, serializeStructuredData } from "@/lib/utils";
+
+export const dynamic = "force-dynamic";
 
 export default async function ResultDetailPage({ params }: { params: { id: string; resultId: string } }) {
   const result = await prisma.testResult.findUnique({
@@ -8,6 +11,11 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
     include: { testCase: true, auditRun: { include: { project: true } } }
   });
   if (!result) return <p className="text-slate-600">Result not found.</p>;
+
+  const rawRequest = parseStructuredData(result.rawRequest);
+  const rawResponse = parseStructuredData(result.rawResponse);
+  const evidenceSpans = parseStructuredData(result.evidenceSpans);
+  const remediationSuggestion = parseStructuredData(result.remediationSuggestion);
 
   return (
     <div className="space-y-6">
@@ -80,29 +88,21 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
         <div className="card p-5 space-y-3">
           <p className="section-title">Execution payloads</p>
           <div className="code-panel">
-            {JSON.stringify(
-              {
-                rawRequest: result.rawRequest,
-                rawResponse: result.rawResponse
-              },
-              null,
-              2
-            )}
+            {serializeStructuredData({
+              rawRequest,
+              rawResponse
+            })}
           </div>
         </div>
         <div className="card p-5 space-y-3">
           <p className="section-title">Structured evidence</p>
           <div className="code-panel">
-            {JSON.stringify(
-              {
-                evidenceSpans: result.evidenceSpans,
-                remediationSuggestion: result.remediationSuggestion,
-                errorType: result.errorType,
-                errorMessage: result.errorMessage
-              },
-              null,
-              2
-            )}
+            {serializeStructuredData({
+              evidenceSpans,
+              remediationSuggestion,
+              errorType: result.errorType,
+              errorMessage: result.errorMessage
+            })}
           </div>
         </div>
       </div>

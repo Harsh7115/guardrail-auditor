@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { exportAuditCsv, exportAuditJson } from "@/lib/actions";
 
+export const dynamic = "force-dynamic";
+
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
   const format = req.nextUrl.searchParams.get("format") ?? "json";
   if (format === "csv") {
