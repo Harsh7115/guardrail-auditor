@@ -251,7 +251,16 @@ export function getDemoProject() {
 
 export function getDemoResult(resultId: string) {
   const run = getDemoRun();
-  const result = run.results.find((item) => item.id === resultId);
+  const candidateIds = [resultId];
+
+  try {
+    const decodedId = decodeURIComponent(resultId);
+    if (!candidateIds.includes(decodedId)) {
+      candidateIds.push(decodedId);
+    }
+  } catch {}
+
+  const result = run.results.find((item) => candidateIds.includes(item.id));
   if (!result) return null;
 
   return {
