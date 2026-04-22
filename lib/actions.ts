@@ -7,6 +7,7 @@ import { aggregateRun } from "@/lib/audit/aggregate";
 import { executeTestCase } from "@/lib/audit/executor";
 import { scoreExecution } from "@/lib/audit/scorer";
 import { AUDIT_PIPELINE_VERSIONS, buildTargetSnapshot } from "@/lib/audit/versioning";
+import { getDemoRun } from "@/lib/demo-data";
 import { parseStructuredData, serializeStructuredData } from "@/lib/utils";
 
 export async function createProject(formData: FormData) {
@@ -124,10 +125,23 @@ export async function runAudit(projectId: string, categories?: string[]) {
 }
 
 export async function exportAuditJson(auditRunId: string) {
-  const run = await prisma.auditRun.findUnique({
-    where: { id: auditRunId },
-    include: { project: true, results: { include: { testCase: true } } }
-  });
+  let run = null;
+
+  try {
+    run = await prisma.auditRun.findUnique({
+      where: { id: auditRunId },
+      include: { project: true, results: { include: { testCase: true } } }
+    });
+  } catch (error) {
+    if (auditRunId !== "demo-run") {
+      throw error;
+    }
+  }
+
+  if (!run && auditRunId === "demo-run") {
+    return JSON.stringify(getDemoRun(), null, 2);
+  }
+
   if (!run) {
     return JSON.stringify(null, null, 2);
   }
@@ -148,10 +162,27 @@ export async function exportAuditJson(auditRunId: string) {
 }
 
 export async function exportAuditCsv(auditRunId: string) {
-  const results = await prisma.testResult.findMany({
-    where: { auditRunId },
-    include: { testCase: true }
-  });
+  let results = null;
+
+  try {
+    results = await prisma.testResult.findMany({
+      where: { auditRunId },
+      include: { testCase: true }
+    });
+  } catch (error) {
+    if (auditRunId !== "demo-run") {
+      throw error;
+    }
+  }
+
+  if (!results && auditRunId === "demo-run") {
+    results = getDemoRun().results;
+  }
+
+  if (!results) {
+    return "";
+  }
+
   const headers = [
     "Test",
     "Category",

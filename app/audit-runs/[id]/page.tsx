@@ -4,14 +4,28 @@ import { ScoreBadge } from "@/components/score-badge";
 import { StatusPill } from "@/components/status-pill";
 import { formatDate, parseStructuredData, serializeStructuredData } from "@/lib/utils";
 import { AuditCharts } from "@/components/charts";
+import { getDemoRun } from "@/lib/demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function AuditRunPage({ params }: { params: { id: string } }) {
-  const run = await prisma.auditRun.findUnique({
-    where: { id: params.id },
-    include: { project: true, results: { include: { testCase: true } } }
-  });
+  let run = null;
+
+  try {
+    run = await prisma.auditRun.findUnique({
+      where: { id: params.id },
+      include: { project: true, results: { include: { testCase: true } } }
+    });
+  } catch (error) {
+    if (params.id !== "demo-run") {
+      throw error;
+    }
+  }
+
+  if (!run && params.id === "demo-run") {
+    run = getDemoRun();
+  }
+
   if (!run) return <p className="text-slate-600">Audit run not found.</p>;
 
   const targetSnapshot = parseStructuredData(run.targetSnapshot);

@@ -2,14 +2,29 @@ import { prisma } from "@/lib/prisma";
 import Link from "next/link";
 import { formatDate } from "@/lib/utils";
 import { ScoreBadge } from "@/components/score-badge";
+import { getDemoProject } from "@/lib/demo-data";
 
 export const dynamic = "force-dynamic";
 
 export default async function ProjectPage({ params }: { params: { id: string } }) {
-  const project = await prisma.project.findUnique({
-    where: { id: params.id },
-    include: { auditRuns: { orderBy: { startedAt: "desc" }, take: 8 }, targetConfig: true }
-  });
+  let project = null;
+  let isDemoFallback = false;
+
+  try {
+    project = await prisma.project.findUnique({
+      where: { id: params.id },
+      include: { auditRuns: { orderBy: { startedAt: "desc" }, take: 8 }, targetConfig: true }
+    });
+  } catch (error) {
+    if (params.id !== "demo-project") {
+      throw error;
+    }
+  }
+
+  if (!project && params.id === "demo-project") {
+    project = getDemoProject();
+    isDemoFallback = true;
+  }
 
   if (!project) {
     return <p className="text-slate-600">Project not found.</p>;
@@ -36,14 +51,21 @@ export default async function ProjectPage({ params }: { params: { id: string } }
           <h1 className="mt-2 text-4xl font-semibold tracking-tight text-white">{project.name}</h1>
           <p className="mt-3 max-w-2xl surface-copy">{project.description}</p>
           <p className="mt-3 text-sm text-slate-500">Target: {project.targetType}</p>
+          {isDemoFallback && (
+            <p className="mt-2 text-sm text-amber-300">Hosted demo is running in read-only fallback mode for this project view.</p>
+          )}
         </div>
         <div className="flex gap-3">
-          <Link href={`/projects/${project.id}/configure`} className="button-secondary">
-            Configure Target
-          </Link>
-          <Link href={`/projects/${project.id}/run`} className="button-primary">
-            Run Audit
-          </Link>
+          {!isDemoFallback && (
+            <>
+              <Link href={`/projects/${project.id}/configure`} className="button-secondary">
+                Configure Target
+              </Link>
+              <Link href={`/projects/${project.id}/run`} className="button-primary">
+                Run Audit
+              </Link>
+            </>
+          )}
         </div>
       </div>
 

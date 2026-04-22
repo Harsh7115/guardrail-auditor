@@ -1,15 +1,29 @@
 import { prisma } from "@/lib/prisma";
 import { StatusPill } from "@/components/status-pill";
 import Link from "next/link";
+import { getDemoResult } from "@/lib/demo-data";
 import { parseStructuredData, serializeStructuredData } from "@/lib/utils";
 
 export const dynamic = "force-dynamic";
 
 export default async function ResultDetailPage({ params }: { params: { id: string; resultId: string } }) {
-  const result = await prisma.testResult.findUnique({
-    where: { id: params.resultId },
-    include: { testCase: true, auditRun: { include: { project: true } } }
-  });
+  let result = null;
+
+  try {
+    result = await prisma.testResult.findUnique({
+      where: { id: params.resultId },
+      include: { testCase: true, auditRun: { include: { project: true } } }
+    });
+  } catch (error) {
+    if (params.id !== "demo-run") {
+      throw error;
+    }
+  }
+
+  if (!result && params.id === "demo-run") {
+    result = getDemoResult(params.resultId);
+  }
+
   if (!result) return <p className="text-slate-600">Result not found.</p>;
 
   const rawRequest = parseStructuredData(result.rawRequest);
