@@ -9,7 +9,7 @@ LLMs are increasingly deployed in production with insufficient security testing.
 ## Features
 
 - 🔴 **Prompt Injection** — tests whether injected instructions can override system prompts
-- 🔐 **Data Leakage** — probes for exposure of system prompts, training data, or PII
+- 🔐 **Data Leakage** — probes for exposure of system prompts, training data, or PII.
 - 🎭 **Role Bypass** — attempts jailbreaks via persona, hypothetical, and encoding attacks.
 - 📊 **Audit Reports** — structured JSON reports with severity scores per attack vector.
 - 🔌 **Multi-Provider** — works with OpenAI, Anthropic, and any OpenAI-compatible endpoint.
