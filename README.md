@@ -12,7 +12,7 @@ LLMs are increasingly deployed in production with insufficient security testing.
 - 🔐 **Data Leakage** — probes for exposure of system prompts, training data, or PII
 - 🎭 **Role Bypass** — attempts jailbreaks via persona, hypothetical, and encoding attacks
 - 📊 **Audit Reports** — structured JSON reports with severity scores per attack vector
-- 🔌 **Multi-Provider** — works with OpenAI, Anthropic, and any OpenAI-compatible endpoint
+- 🔌 **Multi-Provider** — works with OpenAI, Anthropic, and any OpenAI-compatible endpoint.
 - 🚀 **CI/CD Ready** — fail builds on critical vulnerabilities via exit codes.
 
 ## Tech Stack
