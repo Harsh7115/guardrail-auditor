@@ -62,6 +62,9 @@ export type AttackDefenseRound = {
     blockedTerms: string[];
     round: number;
   };
+  // Prompt-mutator strategy that produced this round's attack (undefined for the
+  // round-1 baseline; set once escalation applies a mutation).
+  mutationStrategy?: string;
   responsePreview: string;
 };
 

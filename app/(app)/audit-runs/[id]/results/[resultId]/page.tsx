@@ -24,6 +24,7 @@ type Round = {
   attackPrompt?: string;
   verdict?: string;
   defenseApplied?: boolean;
+  mutationStrategy?: string;
   responsePreview?: string;
   executionStatus?: string;
 };
@@ -100,7 +101,9 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
     rounds.length > 0
       ? rounds.map((r) => ({
           icon: r.defenseApplied ? Wrench : Send,
-          title: `Round ${r.round} · ${r.defenseApplied ? "defense hardened" : "attack delivered"}`,
+          title: `Round ${r.round} · ${
+            r.mutationStrategy ? `mutation: ${r.mutationStrategy.replace(/_/g, " ")}` : "attack delivered"
+          }`,
           body: r.responsePreview || r.attackPrompt || "—",
           verdict: r.verdict
         }))
