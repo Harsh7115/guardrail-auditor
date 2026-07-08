@@ -46,4 +46,28 @@ export type AuditPipelineContext = {
   testCase: TestCase;
   targetSnapshot: TargetSnapshot;
   ragChunks?: string;
+  inputPrompt?: string;
+};
+
+export type AttackDefenseRound = {
+  round: number;
+  attackPrompt: string;
+  verdict: Verdict;
+  scoreImpact: number;
+  executionStatus: ExecutionRecord["status"];
+  latencyMs: number;
+  defenseApplied: boolean;
+  defensePatch?: {
+    strategy: string;
+    blockedTerms: string[];
+    round: number;
+  };
+  responsePreview: string;
+};
+
+export type AttackDefenseLoopResult = {
+  finalExecution: ExecutionRecord;
+  finalEvaluation: EvaluationRecord;
+  rounds: AttackDefenseRound[];
+  stoppedReason: "max_rounds_reached" | "defense_succeeded" | "execution_failed";
 };

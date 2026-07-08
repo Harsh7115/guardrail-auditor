@@ -1,4 +1,5 @@
 import { serializeStructuredData } from "@/lib/utils";
+import { aggregateRun } from "@/lib/audit/aggregate";
 
 const categories = {
   "Prompt Injection": [
@@ -202,6 +203,13 @@ export function getDemoRun() {
   const project = demoProjectBase();
   const results = demoResults();
 
+  // Derive the headline score/tier from the demo's own results so the ring and
+  // the table always agree (instead of a hardcoded, drifting number).
+  const { overallScore, riskTier } = aggregateRun(
+    results.map((r) => r.scoreImpact),
+    results.length
+  );
+
   return {
     id: "demo-run",
     projectId: project.id,
@@ -210,8 +218,8 @@ export function getDemoRun() {
     statusMessage: null,
     startedAt: demoStartedAt,
     completedAt: demoCompletedAt,
-    overallScore: 72,
-    riskTier: "High",
+    overallScore,
+    riskTier,
     suiteVersion: "default-suite@v1",
     evaluatorVersion: "heuristic-evaluator@v2",
     executionVersion: "modular-executor@v1",

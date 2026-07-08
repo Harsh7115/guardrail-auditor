@@ -115,7 +115,8 @@ async function main() {
   const testCases = await prisma.testCase.findMany();
   for (const tc of testCases) {
     const verdicts = ["pass", "warning", "fail"];
-    const verdict = verdicts[(Math.floor(Math.random() * 10) + tc.prompt.length) % 3];
+    // Deterministic verdict mix (was Math.random) so the demo is reproducible.
+    const verdict = verdicts[tc.prompt.length % 3];
     await prisma.testResult.upsert({
       where: { id: `${run.id}-${tc.id}` },
       update: {},
@@ -140,6 +141,16 @@ async function main() {
       }
     });
   }
+
+  // Recompute the demo-run's headline score from its actual results so the ring
+  // and the results table always agree (mirrors lib/audit/aggregate.ts).
+  const seeded = await prisma.testResult.findMany({ where: { auditRunId: run.id } });
+  const totalImpact = seeded.reduce((s, r) => s + r.scoreImpact, 0);
+  const maxImpact = seeded.length * 15;
+  const overallScore = seeded.length ? Math.max(0, Math.round(100 - (totalImpact / maxImpact) * 100)) : 100;
+  const riskTier =
+    overallScore >= 90 ? "Low" : overallScore >= 75 ? "Moderate" : overallScore >= 50 ? "High" : "Critical";
+  await prisma.auditRun.update({ where: { id: run.id }, data: { overallScore, riskTier } });
 }
 
 main()

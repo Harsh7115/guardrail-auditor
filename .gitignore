@@ -2,8 +2,8 @@
 node_modules
 dist
 *.log
-env.local
 .env
+.env*.local
 dev.db
 *.db
 *.sqlite

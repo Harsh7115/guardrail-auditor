@@ -1,12 +1,15 @@
 import { TestCase } from "@prisma/client";
 import { evaluateTestCase } from "@/lib/evaluator";
+import { scoreVerdict } from "@/lib/evaluator";
 import { EvaluationRecord, ExecutionRecord } from "@/lib/audit/types";
+import { isLiveMode } from "@/lib/audit/openai-client";
+import { judgeResponse } from "@/lib/audit/judge";
 
-export function scoreExecution(
+export async function scoreExecution(
   testCase: TestCase,
   execution: ExecutionRecord,
   ragChunks?: string
-): EvaluationRecord {
+): Promise<EvaluationRecord> {
   if (execution.status === "failed") {
     return {
       verdict: "warning",
@@ -22,6 +25,28 @@ export function scoreExecution(
       evidenceSpans: execution.errorMessage ? [{ label: "error", excerpt: execution.errorMessage }] : [],
       scoreImpact: 4
     };
+  }
+
+  // Live mode: grade semantically with the LLM judge. If it throws (network,
+  // quota), fall back to the regex evaluator so a run never dies mid-suite.
+  if (isLiveMode()) {
+    try {
+      const judged = await judgeResponse(testCase, execution.normalizedResponse, ragChunks);
+      return {
+        verdict: judged.verdict,
+        confidence: judged.confidence,
+        explanation: judged.explanation,
+        evidence: judged.evidence,
+        remediation: judged.remediation,
+        remediationSuggestion: remediationSuggestionForVerdict(judged.verdict),
+        matchedRule: matchRule(testCase.category, judged.verdict),
+        evidenceSpans: buildEvidenceSpans(execution.normalizedResponse, judged.evidence),
+        scoreImpact: scoreVerdict(judged.verdict, testCase.severity)
+      };
+    } catch (error) {
+      // eslint-disable-next-line no-console
+      console.warn("[judge] falling back to regex evaluator:", error instanceof Error ? error.message : error);
+    }
   }
 
   const evaluated = evaluateTestCase(testCase, execution.normalizedResponse, ragChunks);
@@ -55,9 +80,29 @@ function matchRule(category: string, verdict: EvaluationRecord["verdict"]) {
   return `${slug}:${verdict}`;
 }
 
+// Sensitive phrases we try to pinpoint inside a response so the UI can
+// highlight the offending span rather than the whole reply.
+const SENSITIVE_PATTERNS: RegExp[] = [
+  /(?:api[ _-]?key|password|passwd|secret|token|ssn)\s*[:=]?\s*[^\s.,;]+/i,
+  /internal config\w*/i,
+  /\b[A-Za-z0-9-]*sk-[A-Za-z0-9-]+/,
+  /\bconfiguration\b[^.\n]*/i
+];
+
 function buildEvidenceSpans(responseText: string, evidence: string) {
-  const excerpt = responseText.trim().slice(0, 180);
-  if (!excerpt) return [];
+  const text = responseText.trim();
+  if (!text) return [];
+
+  // Prefer a targeted match on a sensitive phrase; fall back to a short lead-in.
+  let excerpt = text.slice(0, 120);
+  for (const pattern of SENSITIVE_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      excerpt = match[0].slice(0, 120);
+      break;
+    }
+  }
+
   return [
     {
       label: evidence,

@@ -4,9 +4,10 @@ import { prisma } from "./prisma";
 import { z } from "zod";
 import { getDefaultSuite } from "./test-suite";
 import { aggregateRun } from "@/lib/audit/aggregate";
-import { executeTestCase } from "@/lib/audit/executor";
-import { scoreExecution } from "@/lib/audit/scorer";
-import { AUDIT_PIPELINE_VERSIONS, buildTargetSnapshot } from "@/lib/audit/versioning";
+import { runAttackDefenseLoop } from "@/lib/audit/attack-defense";
+import { buildMarkdownReport } from "@/lib/audit/reporter";
+import { EvaluationRecord } from "@/lib/audit/types";
+import { getPipelineVersions, buildTargetSnapshot } from "@/lib/audit/versioning";
 import { getDemoRun } from "@/lib/demo-data";
 import { parseStructuredData, serializeStructuredData } from "@/lib/utils";
 
@@ -63,28 +64,36 @@ export async function runAudit(projectId: string, categories?: string[]) {
   if (!project) throw new Error("Project not found");
   const suite = await getDefaultSuite(categories);
   const targetSnapshot = buildTargetSnapshot(project.targetType, project.targetConfig);
+  const pipelineVersions = getPipelineVersions();
 
   const auditRun = await prisma.auditRun.create({
     data: {
       projectId,
       status: "running",
       startedAt: new Date(),
-      suiteVersion: AUDIT_PIPELINE_VERSIONS.suiteVersion,
-      evaluatorVersion: AUDIT_PIPELINE_VERSIONS.evaluatorVersion,
-      executionVersion: AUDIT_PIPELINE_VERSIONS.executionVersion,
+      suiteVersion: pipelineVersions.suiteVersion,
+      evaluatorVersion: pipelineVersions.evaluatorVersion,
+      executionVersion: pipelineVersions.executionVersion,
       targetSnapshot: serializeStructuredData(targetSnapshot)
     }
   });
 
   const scores: number[] = [];
   for (const tc of suite) {
-    const execution = await executeTestCase({
+    const loopResult = await runAttackDefenseLoop({
       testCase: tc,
       targetSnapshot,
       ragChunks: project.targetConfig?.ragChunks ?? undefined
     });
-    const evaluated = scoreExecution(tc, execution, project.targetConfig?.ragChunks ?? undefined);
+    const execution = loopResult.finalExecution;
+    const evaluated = loopResult.finalEvaluation;
     scores.push(evaluated.scoreImpact);
+
+    const loopSummary = {
+      stoppedReason: loopResult.stoppedReason,
+      roundsExecuted: loopResult.rounds.length,
+      rounds: loopResult.rounds
+    };
 
     await prisma.testResult.create({
       data: {
@@ -99,12 +108,21 @@ export async function runAudit(projectId: string, categories?: string[]) {
         category: tc.category,
         severity: tc.severity,
         scoreImpact: evaluated.scoreImpact,
-        rawRequest: serializeStructuredData(execution.rawRequest),
-        rawResponse: serializeStructuredData(execution.rawResponse),
+        rawRequest: serializeStructuredData({
+          ...execution.rawRequest,
+          attackDefense: loopSummary
+        }),
+        rawResponse: serializeStructuredData({
+          ...execution.rawResponse,
+          attackDefense: loopSummary
+        }),
         normalizedResponse: execution.normalizedResponse,
         matchedRule: evaluated.matchedRule,
         evidenceSpans: serializeStructuredData(evaluated.evidenceSpans),
-        remediationSuggestion: serializeStructuredData(evaluated.remediationSuggestion),
+        remediationSuggestion: serializeStructuredData({
+          ...evaluated.remediationSuggestion,
+          attackDefense: loopSummary
+        }),
         providerName: execution.executorKind,
         executionStatus: execution.status,
         latencyMs: execution.latencyMs,
@@ -143,7 +161,7 @@ export async function exportAuditJson(auditRunId: string) {
   }
 
   if (!run) {
-    return JSON.stringify(null, null, 2);
+    return null;
   }
 
   const hydratedRun = {
@@ -175,12 +193,12 @@ export async function exportAuditCsv(auditRunId: string) {
     }
   }
 
-  if (!results && auditRunId === "demo-run") {
+  if ((!results || results.length === 0) && auditRunId === "demo-run") {
     results = getDemoRun().results;
   }
 
-  if (!results) {
-    return "";
+  if (!results || results.length === 0) {
+    return null;
   }
 
   const headers = [
@@ -203,15 +221,73 @@ export async function exportAuditCsv(auditRunId: string) {
       r.severity,
       r.providerName ?? "-",
       r.executionStatus,
-      r.testCase.prompt.replace(/\\n/g, " "),
+      r.testCase.prompt.replace(/\r?\n/g, " "),
       r.verdict,
       r.confidence.toFixed(2),
       r.explanation,
       r.evidence,
       r.remediation
-    ].join(",")
+    ]
+      .map(escapeCsvField)
+      .join(",")
   );
-  return [headers.join(","), ...rows].join("\\n");
+  return [headers.map(escapeCsvField).join(","), ...rows].join("\n");
+}
+
+export async function exportAuditMarkdown(auditRunId: string) {
+  let run = null;
+
+  try {
+    run = await prisma.auditRun.findUnique({
+      where: { id: auditRunId },
+      include: { project: true, results: { include: { testCase: true } } }
+    });
+  } catch (error) {
+    if (auditRunId !== "demo-run") {
+      throw error;
+    }
+  }
+
+  if (!run && auditRunId === "demo-run") {
+    run = getDemoRun();
+  }
+
+  if (!run) {
+    return null;
+  }
+
+  const evaluations: EvaluationRecord[] = run.results.map((r) => ({
+    verdict: r.verdict as EvaluationRecord["verdict"],
+    confidence: r.confidence,
+    explanation: r.explanation,
+    evidence: r.evidence,
+    remediation: r.remediation,
+    remediationSuggestion: parseStructuredData<Record<string, unknown>>(r.remediationSuggestion) ?? {},
+    matchedRule: r.matchedRule ?? r.testCase.name,
+    evidenceSpans: parseStructuredData<Array<{ label: string; excerpt: string }>>(r.evidenceSpans) ?? [],
+    scoreImpact: r.scoreImpact
+  }));
+
+  return buildMarkdownReport(
+    run.id,
+    run.project.name,
+    {
+      overallScore: Math.round((run.overallScore ?? 0) * 10) / 10,
+      riskTier: run.riskTier ?? "Unknown"
+    },
+    evaluations,
+    {
+      suiteVersion: run.suiteVersion ?? "unknown",
+      evaluatorVersion: run.evaluatorVersion ?? "unknown",
+      executionVersion: run.executionVersion ?? "unknown"
+    }
+  );
+}
+
+function escapeCsvField(value: unknown) {
+  const text = String(value ?? "");
+  const flattened = text.replace(/\r?\n/g, " ");
+  return /[",]/.test(flattened) ? `"${flattened.replace(/"/g, '""')}"` : flattened;
 }
 
 function maskToken(token: string) {
