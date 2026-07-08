@@ -13,6 +13,15 @@ import OpenAI from "openai";
 
 export const DEFAULT_MODEL = process.env.OPENAI_MODEL?.trim() || "gpt-4o-mini";
 
+// Hard spend circuit-breaker. Once cumulative spend in this process reaches the
+// cap, further live calls throw (callers degrade gracefully to a failed record /
+// simulator). Bounds the financial blast radius of an unauthenticated public
+// deploy that has a key set. Configurable via OPENAI_MAX_USD.
+const MAX_SESSION_USD = (() => {
+  const parsed = Number(process.env.OPENAI_MAX_USD);
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : 1.0;
+})();
+
 // Per-1M-token USD rates. gpt-4o-mini is the default; others are best-effort
 // estimates used only for the local cost log (not billing-accurate).
 const PRICING: Record<string, { input: number; output: number }> = {
@@ -59,6 +68,12 @@ export async function chatComplete(
   messages: ChatMessage[],
   opts: { label: string; maxTokens?: number; jsonMode?: boolean; temperature?: number } = { label: "call" }
 ): Promise<ChatResult> {
+  if (runningCostUsd >= MAX_SESSION_USD) {
+    throw new Error(
+      `OpenAI spend cap reached ($${MAX_SESSION_USD.toFixed(2)}). Raise OPENAI_MAX_USD to continue.`
+    );
+  }
+
   const model = DEFAULT_MODEL;
   const completion = await getClient().chat.completions.create({
     model,

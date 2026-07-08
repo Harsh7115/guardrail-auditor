@@ -6,6 +6,59 @@ type Executor = {
   execute: (context: AuditPipelineContext) => Promise<ExecutionRecord>;
 };
 
+// SSRF guard: the generic-HTTP executor fetches a user-supplied URL server-side.
+// Block non-http(s) schemes and private / loopback / link-local / cloud-metadata
+// hosts so a target config can't turn the server into a request proxy into the
+// internal network or cloud metadata service.
+function isBlockedHost(hostname: string): boolean {
+  const h = hostname.toLowerCase().replace(/^\[|\]$/g, ""); // strip IPv6 brackets
+  if (
+    h === "localhost" ||
+    h.endsWith(".localhost") ||
+    h === "metadata.google.internal" ||
+    h === "metadata" ||
+    h === "::1" ||
+    h.startsWith("fe80:") || // IPv6 link-local
+    h.startsWith("fc") ||
+    h.startsWith("fd") // IPv6 unique-local
+  ) {
+    return true;
+  }
+  const v4 = h.match(/^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$/);
+  if (v4) {
+    const a = Number(v4[1]);
+    const b = Number(v4[2]);
+    if (
+      a === 0 ||
+      a === 127 || // loopback
+      a === 10 || // private
+      (a === 169 && b === 254) || // link-local + cloud metadata (169.254.169.254)
+      (a === 172 && b >= 16 && b <= 31) || // private
+      (a === 192 && b === 168) || // private
+      (a === 100 && b >= 64 && b <= 127) // CGNAT
+    ) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function validateEndpointUrl(rawUrl: string): { ok: true; url: URL } | { ok: false; reason: string } {
+  let url: URL;
+  try {
+    url = new URL(rawUrl);
+  } catch {
+    return { ok: false, reason: "Endpoint URL is not a valid URL." };
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    return { ok: false, reason: "Only http(s) endpoints are allowed." };
+  }
+  if (isBlockedHost(url.hostname)) {
+    return { ok: false, reason: "Endpoint host is not allowed (private, loopback, or metadata address)." };
+  }
+  return { ok: true, url };
+}
+
 // Real OpenAI target: the audited "app" is an actual model configured with the
 // project's system + developer prompt. The attack-defense loop mutates these
 // prompts between rounds, so hardening patches are seen by the live model.
@@ -121,6 +174,21 @@ const genericHttpExecutor: Executor = {
         status: "failed",
         errorType: "configuration_error",
         errorMessage: "Missing endpoint URL for generic HTTP executor."
+      };
+    }
+
+    // SSRF guard — reject internal / metadata / non-http(s) targets before fetch.
+    const validation = validateEndpointUrl(endpointUrl);
+    if (!validation.ok) {
+      return {
+        executorKind: "generic-http",
+        rawRequest: { prompt, endpointUrl },
+        rawResponse: {},
+        normalizedResponse: "",
+        latencyMs: Date.now() - startedAt,
+        status: "failed",
+        errorType: "blocked_endpoint",
+        errorMessage: validation.reason
       };
     }
 
