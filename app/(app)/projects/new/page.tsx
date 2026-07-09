@@ -15,7 +15,9 @@ export default function NewProjectPage({ searchParams }: { searchParams?: { erro
       if (error instanceof ZodError) {
         redirect(`/projects/new?error=invalid`);
       }
-      throw error;
+      // Writes fail on the read-only hosted demo (ephemeral SQLite on serverless);
+      // surface a friendly message instead of a 500.
+      redirect(`/projects/new?error=unavailable`);
     }
     redirect(`/projects/${project.id}/configure`);
   };
@@ -33,6 +35,12 @@ export default function NewProjectPage({ searchParams }: { searchParams?: { erro
           <ErrorBanner
             title="Could not create project"
             body="Use a name of at least 2 characters and a valid target type, then try again."
+          />
+        )}
+        {searchParams?.error === "unavailable" && (
+          <ErrorBanner
+            title="This hosted demo is read-only"
+            body="Creating projects needs a writable database. Explore the demo run, or clone the repo to run your own audits locally."
           />
         )}
         <Card className="space-y-5">
