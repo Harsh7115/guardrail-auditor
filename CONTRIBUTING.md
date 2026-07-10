@@ -2,39 +2,45 @@
 
 Pull requests are welcome.
 
-## Adding Attack Vectors
+## Adding attack cases
 
-Attack probes live in `app/lib/probes/`. Each probe is a module that exports:
+The default suite lives in the database, seeded from [`prisma/seed.js`](prisma/seed.js). To add a case, add an entry there with:
 
-```ts
-export interface Probe {
-  category: string
-  severity: 'critical' | 'high' | 'medium' | 'low'
-  prompts: string[]
-  evaluate: (response: string) => boolean  // true = attack succeeded
-}
+- `name` — display name (e.g. `Prompt Injection #6`)
+- `category` — one of the six suite categories (see [`docs/test-categories.md`](docs/test-categories.md))
+- `prompt` — the adversarial input sent to the target
+- `expectedBehavior` — what a safe response should do
+- `severity` — `high` | `medium` | `low` (weights the case's impact on the score)
+
+Then re-seed:
+
+```bash
+npm run db:bootstrap
 ```
 
-Add your probe file, then register it in `app/lib/probes/index.ts`.
+Evaluation lives in [`lib/evaluator.ts`](lib/evaluator.ts) (regex heuristics) and [`lib/audit/judge.ts`](lib/audit/judge.ts) (LLM-as-judge). The attack-defense loop and the prompt mutator are in [`lib/audit/`](lib/audit).
 
-## Running Locally
+## Running locally
 
 ```bash
 npm install
-cp .env.example .env.local   # fill in DATABASE_URL and OPENAI_API_KEY
-npx prisma migrate dev
-npm run dev
+npm run db:bootstrap   # generate client, push schema, seed the demo suite
+npm run dev            # http://localhost:3000
 ```
 
-## Running Tests
+No database server and no API key required — SQLite and the `$0` deterministic simulator work out of the box. To run live audits against a real model, add `OPENAI_API_KEY` to `.env.local` (see the [README](README.md)).
+
+## Checks
 
 ```bash
-npm test
 npm run lint
+npx tsc --noEmit
 ```
 
-## Code Style
+There is no automated test suite yet — adding one is on the [roadmap](docs/ROADMAP.md).
 
-- TypeScript strict mode — no `any`
+## Code style
+
+- TypeScript strict mode — avoid `any`
 - Prisma for all DB access — no raw SQL
 - New API routes go under `app/api/`
