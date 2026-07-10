@@ -5,6 +5,7 @@ import Link from "next/link";
 import { Card, Button, EmptyState } from "@/components/ui/base";
 import { Field, inputClass, monoInputClass } from "@/components/ui/form";
 import { Eyebrow } from "@/components/ui/base";
+import { getDemoProject } from "@/lib/demo-data";
 import { ChevronLeft, Inbox } from "lucide-react";
 
 export const dynamic = "force-dynamic";
@@ -16,7 +17,17 @@ const targetTypes = [
 ];
 
 export default async function ConfigurePage({ params }: { params: { id: string } }) {
-  const project = await prisma.project.findUnique({ where: { id: params.id }, include: { targetConfig: true } });
+  let project = null;
+  try {
+    project = await prisma.project.findUnique({ where: { id: params.id }, include: { targetConfig: true } });
+  } catch (error) {
+    if (params.id !== "demo-project") throw error;
+  }
+  // Hosted demo has no writable DB — fall back to the seeded demo project so the
+  // configure screen is viewable end to end rather than a dead-end.
+  if (!project && params.id === "demo-project") {
+    project = getDemoProject();
+  }
   if (!project) {
     return (
       <EmptyState icon={Inbox} title="Project not found" body="This project may have been removed." />

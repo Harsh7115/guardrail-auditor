@@ -83,8 +83,9 @@ export function DashboardShell({
   ];
 
   const crumb =
-    nav.find((n) => n.active)?.label ??
-    (pathname.startsWith("/projects") ? "Project" : "Overview");
+    pathname === "/projects/new"
+      ? "New project"
+      : (nav.find((n) => n.active)?.label ?? (pathname.startsWith("/projects") ? "Project" : "Overview"));
 
   return (
     <div className="min-h-screen bg-canvas lg:grid lg:grid-cols-[260px_1fr]">

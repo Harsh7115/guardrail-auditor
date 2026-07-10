@@ -6,17 +6,36 @@ import { isLiveMode } from "@/lib/audit/openai-client";
 import { DEFAULT_MODEL } from "@/lib/audit/openai-client";
 import { Card, Eyebrow, EmptyState } from "@/components/ui/base";
 import { RunSubmit } from "@/components/run-overlay";
+import { getDemoProject, getDemoRun } from "@/lib/demo-data";
 import { Inbox } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
 export default async function RunPage({ params }: { params: { id: string } }) {
-  const project = await prisma.project.findUnique({ where: { id: params.id } });
+  let project = null;
+  try {
+    project = await prisma.project.findUnique({ where: { id: params.id } });
+  } catch (error) {
+    if (params.id !== "demo-project") throw error;
+  }
+  // Hosted demo (no writable DB): fall back to the seeded demo project + suite so
+  // the run screen is viewable rather than a dead-end.
+  if (!project && params.id === "demo-project") {
+    project = getDemoProject();
+  }
   if (!project) {
     return <EmptyState icon={Inbox} title="Project not found" body="This project may have been removed." />;
   }
 
-  const tests = await getDefaultSuite();
+  let tests: { category: string; severity: string }[] = [];
+  try {
+    tests = await getDefaultSuite();
+  } catch (error) {
+    if (params.id !== "demo-project") throw error;
+  }
+  if (!tests || tests.length === 0) {
+    tests = getDemoRun().results.map((r) => r.testCase);
+  }
   const categories = Array.from(new Set(tests.map((t) => t.category)));
   const categoryDetails = categories.map((category) => {
     const matching = tests.filter((t) => t.category === category);
