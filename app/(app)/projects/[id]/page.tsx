@@ -17,8 +17,9 @@ export default async function ProjectPage({ params }: { params: { id: string } }
       where: { id: params.id },
       include: { auditRuns: { orderBy: { startedAt: "desc" }, take: 8 }, targetConfig: true }
     });
-  } catch (error) {
-    if (params.id !== "demo-project") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback or
+    // a clean "not found" instead of a 500.
   }
 
   if (!project && params.id === "demo-project") {

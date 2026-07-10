@@ -19,8 +19,8 @@ export default async function AuditRunPage({ params }: { params: { id: string } 
       where: { id: params.id },
       include: { project: true, results: { include: { testCase: true } } }
     });
-  } catch (error) {
-    if (params.id !== "demo-run") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback / not found.
   }
   if (!run && params.id === "demo-run") run = getDemoRun();
 

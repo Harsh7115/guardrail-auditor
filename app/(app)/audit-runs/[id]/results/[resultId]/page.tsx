@@ -61,8 +61,8 @@ export default async function ResultDetailPage({ params }: { params: { id: strin
       where: { id: params.resultId },
       include: { testCase: true, auditRun: { include: { project: true } } }
     });
-  } catch (error) {
-    if (params.id !== "demo-run") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback / not found.
   }
   if (!result && params.id === "demo-run") result = getDemoResult(params.resultId);
 

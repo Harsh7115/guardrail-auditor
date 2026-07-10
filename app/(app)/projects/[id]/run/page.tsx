@@ -15,8 +15,8 @@ export default async function RunPage({ params }: { params: { id: string } }) {
   let project = null;
   try {
     project = await prisma.project.findUnique({ where: { id: params.id } });
-  } catch (error) {
-    if (params.id !== "demo-project") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback / not found.
   }
   // Hosted demo (no writable DB): fall back to the seeded demo project + suite so
   // the run screen is viewable rather than a dead-end.
@@ -30,8 +30,8 @@ export default async function RunPage({ params }: { params: { id: string } }) {
   let tests: { category: string; severity: string }[] = [];
   try {
     tests = await getDefaultSuite();
-  } catch (error) {
-    if (params.id !== "demo-project") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback / not found.
   }
   if (!tests || tests.length === 0) {
     tests = getDemoRun().results.map((r) => r.testCase);

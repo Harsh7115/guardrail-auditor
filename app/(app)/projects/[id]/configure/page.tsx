@@ -20,8 +20,8 @@ export default async function ConfigurePage({ params }: { params: { id: string }
   let project = null;
   try {
     project = await prisma.project.findUnique({ where: { id: params.id }, include: { targetConfig: true } });
-  } catch (error) {
-    if (params.id !== "demo-project") throw error;
+  } catch {
+    // Unreadable DB (read-only hosted demo) — fall through to demo fallback / not found.
   }
   // Hosted demo has no writable DB — fall back to the seeded demo project so the
   // configure screen is viewable end to end rather than a dead-end.

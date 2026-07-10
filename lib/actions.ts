@@ -150,10 +150,9 @@ export async function exportAuditJson(auditRunId: string) {
       where: { id: auditRunId },
       include: { project: true, results: { include: { testCase: true } } }
     });
-  } catch (error) {
-    if (auditRunId !== "demo-run") {
-      throw error;
-    }
+  } catch {
+    // DB unreadable (e.g. the read-only hosted demo) — treat as not found so
+    // the export route returns a clean 404 instead of a 500.
   }
 
   if (!run && auditRunId === "demo-run") {
@@ -187,10 +186,9 @@ export async function exportAuditCsv(auditRunId: string) {
       where: { auditRunId },
       include: { testCase: true }
     });
-  } catch (error) {
-    if (auditRunId !== "demo-run") {
-      throw error;
-    }
+  } catch {
+    // DB unreadable (e.g. the read-only hosted demo) — treat as not found so
+    // the export route returns a clean 404 instead of a 500.
   }
 
   if ((!results || results.length === 0) && auditRunId === "demo-run") {
@@ -242,10 +240,9 @@ export async function exportAuditMarkdown(auditRunId: string) {
       where: { id: auditRunId },
       include: { project: true, results: { include: { testCase: true } } }
     });
-  } catch (error) {
-    if (auditRunId !== "demo-run") {
-      throw error;
-    }
+  } catch {
+    // DB unreadable (e.g. the read-only hosted demo) — treat as not found so
+    // the export route returns a clean 404 instead of a 500.
   }
 
   if (!run && auditRunId === "demo-run") {
