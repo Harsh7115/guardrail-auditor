@@ -119,8 +119,10 @@ components/ui/              Design-system primitives
 prisma/
   schema.prisma             Project · TargetConfig · AuditRun · TestCase · TestResult
   seed.js                   Default 30-case suite + demo run
-docs/                       Scoring · test categories · threat model · roadmap
+docs/                       Architecture · scoring · test categories · threat model · roadmap
 ```
+
+For a full walkthrough of the pipeline, data model, and request lifecycle, see [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md).
 
 ## Limitations
 
