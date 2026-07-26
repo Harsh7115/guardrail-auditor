@@ -9,3 +9,9 @@ dev.db
 *.sqlite
 .vercel
 *.tsbuildinfo
+
+# OS / editor / tooling cruft
+.DS_Store
+Thumbs.db
+.idea/
+.gstack/
