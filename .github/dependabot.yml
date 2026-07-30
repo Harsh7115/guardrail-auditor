@@ -11,6 +11,14 @@ updates:
       - "dependencies"
     commit-message:
       prefix: "chore(deps)"
+    # Major bumps of runtime deps (Tailwind, zod, openai, Next, etc.) are
+    # breaking and need a manual migration — auto-PRs just fail CI/preview
+    # builds. Skip them here; security fixes still come through regardless of
+    # this ignore, and minor/patch updates are grouped below.
+    ignore:
+      - dependency-name: "*"
+        update-types:
+          - "version-update:semver-major"
     groups:
       # Batch low-risk minor/patch bumps into one PR to cut noise.
       minor-and-patch:
