@@ -1,0 +1,36 @@
+name: Restore site (end maintenance)
+
+# Scheduled one-shot: bring the site back up by removing the maintenance
+# middleware, which triggers a Vercel redeploy of the real app.
+#
+# Target: Wed 2026-08-26 10:00 MST (Arizona, UTC-7) = 2026-08-26 17:00 UTC.
+# GitHub's scheduler is best-effort and can run a few minutes late; it never
+# runs early. You can also trigger it immediately from the Actions tab
+# (Run workflow) via workflow_dispatch.
+on:
+  schedule:
+    - cron: "0 17 26 8 *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Remove maintenance mode and redeploy
+        run: |
+          if [ ! -f middleware.ts ]; then
+            echo "No maintenance middleware present — nothing to restore."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          # Remove the maintenance page AND this workflow, so the restore is
+          # self-cleaning and can't re-fire later.
+          git rm middleware.ts .github/workflows/restore-site.yml
+          git commit -m "chore: restore site (end scheduled maintenance)"
+          git push origin HEAD:main
